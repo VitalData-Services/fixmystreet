@@ -41,3 +41,25 @@ The homepage shows a location minimap above the address search
 If a CDN sits in front of the site, it must keep the query string in the cache key. FixMyStreet
 versions static assets as `file.js?<md5>`, so a cache that ignores query strings keeps serving old
 files after an update.
+
+## Report reference
+
+Every report gets a public reference `DDMMYYYY-N`: the local (`TIME_ZONE`) date it was created
+and its position among all reports created that day, e.g. `24102026-3`. It is computed on the fly
+(`FixMyStreet::DB::Result::Problem::greece_ref` in `Greece.pm`), shown on the report page and in the
+email to the municipality, and accepted in the search box, alongside `ref: <id>`. A bare number
+stays a place search, because Greek postcodes are five digits.
+
+## Emails to municipalities
+
+`templates/email/greece/submit.txt` and `submit.html` are the Greek versions of the report email
+(formal register), and include the reference. `signature.txt` and `site-name.txt` apply to every
+email. Other emails still fall back to the English `templates/email/default`.
+
+## Municipality categories
+
+Each municipality's report categories and receiving addresses are kept as idempotent SQL in
+`data/greece/contacts/<municipality>.sql`, with the source page noted. Contact details shown on the
+minimap card come from `data/greece/dimoi_contacts_manual.csv`, which overrides the base CSV in
+`bin/greece/build-dimoi-data.py`. A category named `Άλλα` (the translation of "Other") is always
+listed last.

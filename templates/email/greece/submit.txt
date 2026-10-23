@@ -1,0 +1,49 @@
+Subject: Αναφορά προβλήματος [% report.greece_ref %]: [% report.title %]
+
+Προς: [% bodies_name %]
+
+[% missing %][% multiple %]Χρήστης του [% site_name %] υπέβαλε την παρακάτω αναφορά για ένα
+τοπικό πρόβλημα που πιστεύει ότι χρειάζεται την προσοχή σας.
+
+[% fuzzy %], ή για να δώσετε ενημέρωση για το πρόβλημα,
+επισκεφθείτε τον παρακάτω σύνδεσμο:
+
+    [% url %]
+
+[% has_photo %]----------
+
+Αριθμός αναφοράς: [% report.greece_ref %]
+
+Όνομα: [% report.name %]
+
+Email: [% report.user.email OR "Δεν δόθηκε" %]
+
+Τηλέφωνο: [% report.user.phone OR "Δεν δόθηκε" %]
+
+Κατηγορία: [% report.category %]
+
+Θέμα: [% report.title %]
+
+Λεπτομέρειες: [% report.detail %]
+
+[% FOR field IN report.get_extra_fields %][% IF field.value ~%]
+[% field.description OR field.name %]: [% field.value %]
+
+[% END %][% END ~%]
+
+Γεωγραφικό πλάτος: [% report.latitude %]
+
+Γεωγραφικό μήκος: [% report.longitude %]
+
+Η τοποθεσία στον χάρτη OpenStreetMap: [% osm_url %]
+
+[% closest_address %]----------
+
+Οι απαντήσεις σε αυτό το email θα πάνε απευθείας στον χρήστη που υπέβαλε την αναφορά.
+
+[% signature %]
+
+Αν υπάρχει καταλληλότερη διεύθυνση email για μηνύματα αυτού του είδους
+([% category_footer %]), παρακαλούμε ενημερώστε μας. Θα βοηθήσει να
+βελτιωθεί η εξυπηρέτηση των κατοίκων. Είναι ευπρόσδεκτα και οποιαδήποτε
+άλλα σχόλια.
