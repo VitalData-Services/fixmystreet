@@ -26,6 +26,9 @@ services:
     volumes:
       - ./conf/general.yml-docker:/var/www/fixmystreet/fixmystreet/conf/general.yml
       - ./locale/el_GR.UTF-8/LC_MESSAGES:/var/www/fixmystreet/fixmystreet/locale/el_GR.UTF-8/LC_MESSAGES:ro
+      - ./perllib/FixMyStreet/Cobrand/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Cobrand/Greece.pm:ro
+      - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
+      - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - type: tmpfs
         target: /run

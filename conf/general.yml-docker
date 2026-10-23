@@ -196,7 +196,8 @@ MAP_TYPE: 'OSM'
 # Any hostname with 'orbital' in it will use the moon cobrand.
 # This also allows development servers to map to different cobrands if needed,
 # using DNS subdomains for example.
-ALLOWED_COBRANDS: []
+ALLOWED_COBRANDS:
+  - greece
 
 # If your site has many cobrands, you may want to have per-cobrand settings. To
 # do this, make a hash of feature keys, each of which is a hash of monikers, eg
