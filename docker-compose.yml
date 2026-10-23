@@ -12,7 +12,9 @@ services:
         aliases:
           - nginx.svc
   fixmystreet:
-    image: fixmystreet/fixmystreet:stable
+    image: fixmystreets-gr:latest
+    build:
+      context: ./docker/greece
     tty: true
     depends_on:
       postgres:
@@ -23,6 +25,7 @@ services:
     stop_signal: SIGRTMIN+3
     volumes:
       - ./conf/general.yml-docker:/var/www/fixmystreet/fixmystreet/conf/general.yml
+      - ./locale/el_GR.UTF-8/LC_MESSAGES:/var/www/fixmystreet/fixmystreet/locale/el_GR.UTF-8/LC_MESSAGES:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - type: tmpfs
         target: /run
