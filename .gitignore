@@ -69,3 +69,6 @@ gh_fixmycommunity
 [Ss]midsy*
 [Kk]iit[Cc]*
 [Tt]ransport[Ff]ocus*
+
+# Local secrets for docker compose
+/.env

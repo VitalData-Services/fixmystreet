@@ -21,10 +21,10 @@ FMS_DB_USER: 'fms'
 FMS_DB_PASS: 'fms'
 
 # The base URL of the install.
-BASE_URL: 'http://localhost:8000'
+BASE_URL: 'https://fixmystreets.gr'
 # Use the below if you're using the Catalyst development server
 #   BASE_URL: 'http://localhost:3000'
-SECURE_PROXY_SSL_HEADER: ''
+SECURE_PROXY_SSL_HEADER: [ 'X-Forwarded-Proto', 'https' ]
 # If you're behind a proxy, set this to a two-element list containing the
 # trusted HTTP header and the required value. For example:
 #   SECURE_PROXY_SSL_HEADER: [ 'X-Forwarded-Proto', 'https' ]
@@ -38,13 +38,13 @@ CONTENT_SECURITY_POLICY: ''
 using_frontend_proxy: 1
 
 # Email domain used for emails, and contact name/email for admin use.
-EMAIL_DOMAIN: '127.0.0.1.xip.io'
-CONTACT_EMAIL: 'help@127.0.0.1.xip.io'
-CONTACT_NAME: 'FixMyStreet'
+EMAIL_DOMAIN: 'fixmystreets.gr'
+CONTACT_EMAIL: '<contact address>'
+CONTACT_NAME: 'FixMyStreets'
 # Address used for emails you don't expect a reply to (e.g. confirmation
 # emails); can be same as CONTACT_EMAIL above, of course, if you don't have a
 # special address.
-DO_NOT_REPLY_EMAIL: 'help@127.0.0.1.xip.io'
+DO_NOT_REPLY_EMAIL: '<contact address>'
 
 # Whether this is a development site or not. It will mean e.g. templates/
 # CSS modified times aren't cached
@@ -63,11 +63,12 @@ STAGING_FLAGS:
 
 # What to use as front page/alert example places placeholder
 # Defaults to High Street, Main Street
-EXAMPLE_PLACES: [ 'High Street', 'Main Street' ]
+EXAMPLE_PLACES: [ 'Ερμού, Αθήνα', 'Τσιμισκή, Θεσσαλονίκη' ]
 
 # An array of languages for the site, in the following format:
 # <language code>,<pretty name>,<locale>
 LANGUAGES:
+  - 'el,Ελληνικά,el_GR'
   - 'en-gb,English,en_GB'
 
 # A postgresql text search configuration value - it should match the
@@ -76,7 +77,7 @@ DB_FULL_TEXT_SEARCH_CONFIG: 'english'
 
 # If you're running an installation that is being used in a different time zone
 # from the server, you can set the time zone here (standard time zone string)
-TIME_ZONE: ""
+TIME_ZONE: 'Europe/Athens'
 
 # File locations for cached geocoding results.
 GEO_CACHE: '../cache/'
@@ -118,8 +119,8 @@ PHOTO_STORAGE_OPTIONS:
 #   MAPIT_URL: 'http://global.mapit.mysociety.org/'
 # And then specify whichever type code have the boundaries you want:
 #   MAPIT_TYPES: [ 'O06' ]
-MAPIT_URL: 'http://localhost:9000/fakemapit/'
-MAPIT_TYPES: [ 'ZZZ' ]
+MAPIT_URL: 'https://global.mapit.mysociety.org/'
+MAPIT_TYPES: [ 'O07' ]
 
 # If the MapIt you're using in MAPIT_URL requires an API key
 # (as https://mapit.mysociety.org/ does, for example), specify it here.
@@ -167,7 +168,9 @@ BING_MAPS_API_KEY: ''
 #     google_country: <.ccTLD to restrict results to>
 #     lang: <language for results>
 #
-GEOCODING_DISAMBIGUATION: ''
+GEOCODING_DISAMBIGUATION:
+  country: 'gr'
+  bounds: [ 34.8, 19.3, 41.8, 29.7 ]
 
 # The type of map you want to use. If left blank, the default is OpenStreetMap.
 # Other options are currently pretty UK specific, including "FMS" for UK
@@ -193,10 +196,7 @@ MAP_TYPE: 'OSM'
 # Any hostname with 'orbital' in it will use the moon cobrand.
 # This also allows development servers to map to different cobrands if needed,
 # using DNS subdomains for example.
-ALLOWED_COBRANDS:
-  - cobrand1
-  - cobrand2: 'hostname_substring2'
-  - cobrand3
+ALLOWED_COBRANDS: []
 
 # If your site has many cobrands, you may want to have per-cobrand settings. To
 # do this, make a hash of feature keys, each of which is a hash of monikers, eg
