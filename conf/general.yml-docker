@@ -119,7 +119,8 @@ PHOTO_STORAGE_OPTIONS:
 #   MAPIT_URL: 'http://global.mapit.mysociety.org/'
 # And then specify whichever type code have the boundaries you want:
 #   MAPIT_TYPES: [ 'O06' ]
-MAPIT_URL: 'https://global.mapit.mysociety.org/'
+# Local answers where certain, global MapIt otherwise (docker/mapit-local). Rollback: the global URL.
+MAPIT_URL: 'http://mapit-local.svc:8080/'
 MAPIT_TYPES: [ 'O07' ]
 
 # If the MapIt you're using in MAPIT_URL requires an API key

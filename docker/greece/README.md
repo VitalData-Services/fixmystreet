@@ -160,3 +160,31 @@ and `data/greece/police_units.csv` every unit listed on astynomia.gr/epikoinonia
 private (`non_public`), because a complaint can name a vehicle, and its questions (what happened,
 how often, vehicle details) are sent to the police only; only the station or directorate copy of the
 category has them, so the form shows them once.
+
+## Municipality lookups (local MapIt)
+
+FixMyStreet asks MapIt which municipality a point is in for every map page and report form, and
+global MapIt takes about half a second per call. `docker/mapit-local` answers instead (in about a
+millisecond) when the answer is certain, and passes everything else to global MapIt unchanged:
+
+- a point is answered locally only if it is inside a municipality and no other municipality and no
+  coastline is within about 300 m (`MAPIT_LOCAL_MARGIN`, in degrees), because the boundaries in
+  `data/geoms.json` are simplified OpenStreetMap ones; points near a boundary or just off the coast
+  go to global MapIt;
+- `area/<id>` and `areas/<ids>` are global MapIt's own records for the 328 areas the bodies use
+  (`data/areas.json`, fetched once with `areas/<all ids>`);
+- `data/mapit_ids.json` maps each OSM municipality to its global MapIt area (Corfu and Kefalonia
+  have one area for three municipalities each, as on global MapIt).
+
+The container logs each request as `local` or `upstream`. FixMyStreet uses it through
+`MAPIT_URL: 'http://mapit-local.svc:8080/'`; going back to `https://global.mapit.mysociety.org/`
+and restarting the app turns it off. If bodies get new areas, refresh `data/areas.json`.
+
+## Photos and caches
+
+`UPLOAD_DIR` (`../upload/`) and the caches live on the named volumes `fixmystreet-upload` and
+`fixmystreet-cache`, owned by the app user (uid 1000): a new volume is created owned by root, so
+after creating one, run `docker exec -u root fixmystreet-fixmystreet-1 chown fms:fms
+/var/www/fixmystreet/upload /var/www/fixmystreet/cache`. Before these volumes, recreating the
+container deleted every uploaded photo.
+

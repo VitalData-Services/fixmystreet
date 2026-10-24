@@ -43,6 +43,10 @@ services:
       - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro
       # App icons of the installable web app (manifest theme icons are read from web/theme/<cobrand>).
       - ./web/theme/greece:/var/www/fixmystreet/fixmystreet/web/theme/greece:ro
+      # Uploaded photos (UPLOAD_DIR '../upload/') and the caches must outlive the container: without
+      # these, recreating it lost every report's photo (2026-10-24).
+      - fixmystreet-upload:/var/www/fixmystreet/upload
+      - fixmystreet-cache:/var/www/fixmystreet/cache
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - type: tmpfs
         target: /run
@@ -93,6 +97,17 @@ services:
       default:
         aliases:
           - memcached.svc
+  # Municipality lookups answered locally where certain, else by global MapIt (docker/mapit-local);
+  # FixMyStreet uses it through MAPIT_URL in conf/general.yml-local.
+  mapit-local:
+    build: ./docker/mapit-local
+    image: fixmystreets-mapit-local:latest
+    restart: unless-stopped
+    mem_limit: 256m
+    networks:
+      default:
+        aliases:
+          - mapit-local.svc
   # Self-hosted map (docker/greece/tiles, data built by bin/greece/build-tiles.sh), proxied at /tiles/.
   tiles:
     image: maptiler/tileserver-gl:v5.6.0
@@ -111,3 +126,5 @@ services:
 
 volumes:
   fixmystreet-pgdata:
+  fixmystreet-upload:
+  fixmystreet-cache:
