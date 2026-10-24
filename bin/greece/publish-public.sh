@@ -16,6 +16,8 @@ msg=${2:?commit message}
 PATHS="
 perllib/FixMyStreet/Cobrand/Greece.pm
 perllib/FixMyStreet/Map/Greece.pm
+perllib/FixMyStreet/App/Controller/GreeceVote.pm
+data/greece/votes.sql
 templates/web/greece
 templates/email/greece
 web/cobrands/greece

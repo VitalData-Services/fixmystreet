@@ -36,6 +36,8 @@ services:
       # Same as the image's, except that text without Latin lowercase letters (Greek) is no longer
       # taken for SHOUTING and lowercased (cleanup_text).
       - ./perllib/Utils.pm:/var/www/fixmystreet/fixmystreet/perllib/Utils.pm:ro
+      # 👍/👎 on reports (POST /greece/vote/<id>).
+      - ./perllib/FixMyStreet/App/Controller/GreeceVote.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceVote.pm:ro
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
       - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro

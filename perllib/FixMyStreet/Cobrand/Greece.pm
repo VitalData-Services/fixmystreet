@@ -198,6 +198,26 @@ sub greece_moderation_email {
     });
 }
 
+# Who is voting 👍/👎 on a report (App::Controller::GreeceVote, Problem::greece_votes): a signed-in
+# voter is their account; anyone else is a random id in a long-lived cookie, kept here only as its
+# hash. Undef when there is none yet and $create is false.
+sub greece_voter {
+    my ($self, $c, $create) = @_;
+    return 'u:' . $c->user->id if $c->user_exists;
+    my $cookie = $c->req->cookie('gr_voter');
+    my $id = $cookie ? $cookie->value : '';
+    if ($id !~ /^[0-9a-f]{32}$/) {
+        return unless $create;
+        open my $fh, '<:raw', '/dev/urandom' or die "no /dev/urandom: $!";
+        read $fh, my $bytes, 16;
+        close $fh;
+        $id = unpack 'H*', $bytes;
+        $c->res->cookies->{gr_voter} = { value => $id, expires => '+2y', path => '/', httponly => 1, secure => 1 };
+    }
+    require Digest::SHA;
+    return 'c:' . Digest::SHA::sha256_hex($id);
+}
+
 # Installable web app (PWA). Name and colours are the cobrand's manifest theme (admin, or
 # data/greece/manifest-theme.sql); the icons in web/theme/greece/ are drawn to be maskable.
 sub manifest {
@@ -369,6 +389,20 @@ sub greece_local_time {
 }
 
 # Inverse of greece_ref: the id of the $n-th report created on local date $date (YYYY-MM-DD).
+# 👍/👎 counts and the voter's own vote (1, -1 or 0); the voter from the request unless given.
+sub greece_votes {
+    my ($self, $c, $voter) = @_;
+    $voter //= $c ? $c->cobrand->greece_voter($c) : undef;
+    my ($up, $down, $mine) = eval {
+        FixMyStreet::DB->schema->storage->dbh->selectrow_array(<<'SQL', undef, $voter // '', $self->id);
+SELECT count(*) FILTER (WHERE value = 1), count(*) FILTER (WHERE value = -1),
+       coalesce(max(value) FILTER (WHERE voter = ?), 0)
+  FROM greece_vote WHERE problem_id = ?
+SQL
+    };
+    return { up => $up || 0, down => $down || 0, mine => $mine || 0 };
+}
+
 sub greece_ref_to_id {
     my ($date, $n) = @_;
     return unless $n >= 1;

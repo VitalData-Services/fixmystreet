@@ -582,3 +582,31 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
     text-decoration: underline;
     cursor: pointer;
 }
+
+/* 👍/👎 on the report page (report/_support.html, votes.js) */
+.gr-votes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0.75em 0;
+}
+.gr-vote {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    min-height: 44px;
+    padding: 0.35em 0.9em;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    background: var(--gr-surface);
+    border: 1px solid var(--gr-line);
+    border-radius: 999px;
+    cursor: pointer;
+}
+.gr-vote:hover { border-color: #9db4e8; }
+.gr-vote[aria-pressed="true"] { background: #e8eefc; border-color: #1d5fd6; color: #123c8c; }
+.gr-vote:disabled { opacity: 0.6; cursor: wait; }
+.gr-votes__status { flex-basis: 100%; font-size: 0.875em; color: #a1260d; }
+.gr-votes__status:empty { display: none; }

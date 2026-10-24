@@ -27,6 +27,13 @@ map "$request_method $uri" $form_post_visitor {
 }
 limit_req_zone $form_post_visitor zone=form_posts:5m rate=2r/m;
 
+# 👍/👎 votes (POST /greece/vote/<id>), their own budget per visitor: 10 at once, then 20 a minute.
+map "$request_method $uri" $vote_visitor {
+    default "";
+    "~^POST /greece/vote/" $visitor;
+}
+limit_req_zone $vote_visitor zone=votes:5m rate=20r/m;
+
 server {
 
     listen 80 default_server;
@@ -103,6 +110,7 @@ server {
 
     location @catalyst {
         limit_req zone=form_posts burst=5 nodelay;
+        limit_req zone=votes burst=10 nodelay;
         limit_req_status 429;
         error_page 429 @too_many;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
