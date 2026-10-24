@@ -37,13 +37,39 @@ sub munge_sendreport_params {
     $h->{dimos_name} = $dimos->name if $dimos;
 }
 
-# Police complaints (disabled and EV-charging bays) can also be sent by the reporter as an SMS
+# Police complaints (EV-charging bays, blocked passage) can also be sent by the reporter as an SMS
 # from their own phone; see Problem::greece_sms.
 sub greece_sms_number { '100' }
 
 # Reporting needs no account and no email confirmation: a report is confirmed and sent straight
 # away. Afterwards the reporter's address gets a one-off link to create an account (below).
 sub never_confirm_reports { 1 }
+
+# The report form has no title field, only the description (templates/web/greece/report/new/
+# form_report.html). The title is the category, which is what lists, the report page and the
+# emails to the body show above the description; for «Άλλα» it is the start of the description.
+sub report_check_for_errors {
+    my ($self, $c) = @_;
+    my $report = $c->stash->{report};
+    if ($report && ($report->title // '') !~ /\S/) {
+        my $category = $report->category // '';
+        my $title = $category eq 'Άλλα' || $category eq '' ? greece_excerpt($report->detail, 60) : $category;
+        $report->title($title || $category || 'Αναφορά');
+    }
+    return $self->SUPER::report_check_for_errors($c);
+}
+
+# The text on one line, cut at a word to at most $max characters, with "…" if cut.
+sub greece_excerpt {
+    my ($text, $max) = @_;
+    $text = $text // '';
+    $text =~ s/\s+/ /g;
+    $text =~ s/^ | $//g;
+    return $text if length $text <= $max;
+    my $cut = substr($text, 0, $max);
+    $cut =~ s/[\s,.;:·]+\S*$// if $cut =~ /\s/;
+    return "$cut…";
+}
 
 # Not signed in, the report form must not change an existing account: FixMyStreet writes the
 # form's name and phone onto the user with that email, and with no confirmation anyone could do

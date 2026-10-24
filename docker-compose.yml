@@ -33,6 +33,9 @@ services:
       - ./locale/el_GR.UTF-8/LC_MESSAGES:/var/www/fixmystreet/fixmystreet/locale/el_GR.UTF-8/LC_MESSAGES:ro
       - ./perllib/FixMyStreet/Cobrand/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Cobrand/Greece.pm:ro
       - ./perllib/FixMyStreet/Map/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Map/Greece.pm:ro
+      # Same as the image's, except that text without Latin lowercase letters (Greek) is no longer
+      # taken for SHOUTING and lowercased (cleanup_text).
+      - ./perllib/Utils.pm:/var/www/fixmystreet/fixmystreet/perllib/Utils.pm:ro
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
       - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro

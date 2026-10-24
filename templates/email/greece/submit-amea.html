@@ -24,7 +24,7 @@ INCLUDE '_email_top.html';
     <li style="[% p_style %]"><strong>Τοποθεσία:</strong> [% location | html %].
       <a href="[% osm_url %]">[% report.latitude %], [% report.longitude %]</a></li>
     <li style="[% p_style %]"><strong>Περιγραφή της παράβασης:</strong> [% paravasi_text | html %].
-      Σχόλια: «[% report.title | html %][% IF report.detail %]: [% report.detail | html %][% END %]»</li>
+      [%~ IF report.detail %] Σχόλια: «[% report.detail | html %]»[% END %]</li>
     [%~ IF pinakida %]
     <li style="[% p_style %]"><strong>Αριθμός κυκλοφορίας:</strong> [% pinakida | html %]</li>
     [%~ END %]
