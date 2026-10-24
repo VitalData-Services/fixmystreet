@@ -477,15 +477,23 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
     border-radius: var(--gr-radius-s);
 }
 
-/* "Τράβηξε φωτογραφία" under the photo upload box (camera.js) */
+/* "Τράβηξε φωτογραφία" and "Από τη συλλογή" under the photo upload box (camera.js) */
 
-.gr-camera-btn {
-    display: inline-flex;
-    align-items: center;
+.gr-photo-actions {
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.5em;
     margin: 0.75em 0 0.25em;
 }
-.gr-camera-btn svg, .gr-camera__shutter svg { flex: none; }
+.gr-photo-actions .btn {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    margin: 0;
+}
+.gr-photo-actions svg, .gr-camera__shutter svg { flex: none; }
 .gr-camera {
     width: min(760px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
