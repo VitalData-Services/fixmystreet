@@ -644,3 +644,6 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
    «Ανώνυμη αναφορά» button is not used. */
 .js-show-if-anonymous { display: none !important; }
 
+/* Cloudflare Turnstile (turnstile.js): usually invisible; when it asks for a click, it gets room. */
+.gr-turnstile:not(:empty) { margin: 0.75em 0; }
+

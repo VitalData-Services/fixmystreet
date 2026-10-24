@@ -72,6 +72,49 @@ sub anonymous_account {
     return { email => "anonymous\@$domain", name => 'Ανώνυμος πολίτης' };
 }
 
+# Cloudflare Turnstile: a visitor who is not signed in passes Cloudflare's check before a report,
+# an update or a contact message is accepted (templates/web/greece/_turnstile.html, turnstile.js).
+# The keys are TURNSTILE_SITEKEY and TURNSTILE_SECRET in general.yml; without them there is no check.
+# If Cloudflare cannot be asked, the form is let through (the per-visitor limit in nginx still holds).
+# Until TURNSTILE_ENFORCE is set, a refused check is only logged, so that it can be seen to pass for
+# real visitors (automated browsers never get a token) before it can turn anyone away.
+sub greece_turnstile_sitekey { FixMyStreet->config('TURNSTILE_SITEKEY') }
+
+sub greece_turnstile_ok {
+    my ($self, $c) = @_;
+    my $secret = FixMyStreet->config('TURNSTILE_SECRET') or return 1;
+    return 1 if $c->user_exists;
+    return $c->stash->{greece_turnstile} if defined $c->stash->{greece_turnstile};   # a token works once
+    my $token = $c->get_param('cf-turnstile-response') // '';
+    my $ok = 0;
+    if ($token ne '') {
+        require HTTP::Tiny;
+        require JSON::MaybeXS;
+        my $ip = $c->req->header('CF-Connecting-IP');
+        my $res = HTTP::Tiny->new(timeout => 10)->post_form('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            { secret => $secret, response => $token, ($ip ? (remoteip => $ip) : ()) });
+        if ($res->{status} == 599 || $res->{status} >= 500) {
+            $c->log->warn("Turnstile not reachable ($res->{status}); form let through");
+            $ok = 1;
+        } else {
+            my $out = eval { JSON::MaybeXS::decode_json($res->{content}) } || {};
+            $ok = $out->{success} ? 1 : 0;
+            $c->log->warn('Turnstile ' . ($ok ? 'passed' : 'refused: ' . join(',', @{ $out->{'error-codes'} || [] })));
+        }
+    } else {
+        $c->log->warn('Turnstile refused: no token');
+    }
+    $ok = 1 unless FixMyStreet->config('TURNSTILE_ENFORCE');
+    return $c->stash->{greece_turnstile} = $ok;
+}
+
+use constant GREECE_TURNSTILE_ERROR => 'Ο έλεγχος ασφαλείας δεν ολοκληρώθηκε. Περίμενε λίγο να ολοκληρωθεί και στείλε ξανά.';
+
+sub extra_contact_validation {
+    my ($self, $c) = @_;
+    return $self->greece_turnstile_ok($c) ? () : (turnstile => GREECE_TURNSTILE_ERROR);
+}
+
 # Whether the report was made without an email (filed under anonymous_account).
 sub greece_anonymous_report {
     my ($self, $report) = @_;
@@ -90,6 +133,7 @@ sub report_check_for_errors {
         && ($c->get_param('username_register') // '') !~ /\S/) {
         $more{username_register} = 'Για να φαίνεται δημόσια το όνομά σου, γράψε και το email σου.';
     }
+    $more{turnstile} = GREECE_TURNSTILE_ERROR unless $self->greece_turnstile_ok($c);
     if ($report && ($report->title // '') !~ /\S/) {
         my $category = $report->category // '';
         my $title = $category eq 'Άλλα' || $category eq '' ? greece_excerpt($report->detail, 60) : $category;
@@ -245,6 +289,7 @@ sub process_open311_extras {
     my ($self, $c, $body, $extra) = @_;
     return unless $c && $c->action && $c->action->namespace eq 'report/update' && $c->req->method eq 'POST';
     my $update = $c->stash->{update} or return;
+    $c->stash->{field_errors}{turnstile} = GREECE_TURNSTILE_ERROR unless $self->greece_turnstile_ok($c);
     my $count = 0;
     for my $field (qw(text name)) {
         my ($masked, $n) = greece_mask_bad_words($update->$field);
