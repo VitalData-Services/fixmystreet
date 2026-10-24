@@ -96,8 +96,19 @@ listed last.
 (332), from the ΥΠΕΣ list of 14/08/2026 and the ΚΕΔΕ catalogue 2024-2028, with every other address
 they give, whether the two agree, and an MX check of the domain (mailboxes were not tested).
 
-Disabled (ΑμεΑ) and EV-charging bays go to the police rather than the municipality: a body per
-police station covers the municipality's area and owns that category
-(`data/greece/contacts/police_<municipality>.sql`). The category is private (`non_public`), because
-a complaint can name a vehicle, and its questions (what happened, how often, vehicle details) are
-sent to the police only.
+Disabled (ΑμεΑ) and EV-charging bays go to the police rather than the municipality, in every
+municipality. A body per police unit covers the areas of the municipalities it serves and owns that
+category, so a report goes in one email to two units:
+- the municipality's Αστυνομικό Τμήμα when the match is certain, otherwise its Διεύθυνση
+  Αστυνομίας, which forwards citizens' requests to the competent unit (also where MapIt has one
+  area for several municipalities, on Corfu and Kefalonia);
+- the Τμήμα Τροχαίας picked for it. astynomia.gr does not publish their areas, so the pick is the
+  nearest one of the same directorate, or the one at its seat, and is not confirmed.
+
+`data/greece/dimoi_police.csv` holds the match per municipality, with its method and confidence,
+and `data/greece/police_units.csv` every unit listed on astynomia.gr/epikoinonia, compared with the
+ΕΛ.ΑΣ. list of directorate addresses of 17/06/2020. `bin/greece/police-sql.py` turns them into
+`data/greece/contacts/police.sql`; re-running it replaces the police bodies' areas. The category is
+private (`non_public`), because a complaint can name a vehicle, and its questions (what happened,
+how often, vehicle details) are sent to the police only; only the station or directorate copy of the
+category has them, so the form shows them once.

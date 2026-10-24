@@ -4,7 +4,7 @@
 -- service that handles each category is kept in the note and in departments.csv.
 -- Source: https://www.haidari.gr/tilefona-epikoinonias/ (read 2026-10-24).
 -- Categories missing from the list below are marked deleted. Disabled/EV-charging bays go to the
--- police instead (police_haidari.sql).
+-- police instead (police.sql).
 BEGIN;
 CREATE TEMP TABLE haidari_categories (category text, note text) ON COMMIT DROP;
 INSERT INTO haidari_categories VALUES

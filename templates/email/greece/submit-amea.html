@@ -46,7 +46,7 @@ INCLUDE '_email_top.html';
   <p style="[% secondary_p_style %] margin-top: 1.5em;">Η καταγγελία υποβλήθηκε μέσω του [% site_name %][% IF report.non_public %] και δεν δημοσιεύεται στον ιστότοπο[% END %]. Οι απαντήσεις σε αυτό το μήνυμα πηγαίνουν απευθείας στον/στην [% report.name | html %].</p>
   <div style="margin: 20px 0 0 0; padding: 12px 16px; border: 1px solid #d8cfe9; border-radius: 4px; background-color: #f6f3fb;">
     <p style="[% p_style %]">
-      [%~ IF sent_to %]Στάλθηκε στη διεύθυνση <strong>[% sent_to | html %]</strong>. [% END ~%]
+      [%~ IF sent_to %]Στάλθηκε [% sent_to.match(',') ? 'στις διευθύνσεις' : 'στη διεύθυνση' %] <strong>[% sent_to | html %]</strong>. [% END ~%]
       Αν δεν είστε η αρμόδια υπηρεσία για αυτή την περιοχή, στείλτε μας τη σωστή διεύθυνση με νέο email προς
       <a href="mailto:[% cobrand.contact_email | html %]?subject=[% correction_subject | uri %]&amp;body=[% 'MAIL ΥΠΗΡΕΣΙΑΣ:' | uri %]">[% cobrand.contact_email | html %]</a>
       (όχι με απάντηση σε αυτό), γράφοντας:</p>
