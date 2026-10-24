@@ -18,6 +18,8 @@ FixMyBarangay.po
 /web/css/core.css
 /web/css/main.css
 /web/cobrands/*/*.css
+# The Greece cobrand has plain CSS, not compiled SCSS.
+!/web/cobrands/greece/*.css
 /web/cobrands/*/*.css.map
 *.auto.*
 
