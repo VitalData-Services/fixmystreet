@@ -523,3 +523,39 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
 .gr-camera__actions .btn { margin: 0; }
 .gr-camera [hidden] { display: none !important; }
 .gr-camera__shutter { display: inline-flex; align-items: center; gap: 0.5em; }
+
+/* Suggestions under the address box (place-search.js) */
+
+.gr-places-wrap { position: relative; }
+.gr-places {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: min(60vh, 22em);
+    overflow-y: auto;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    text-align: left;
+    background: var(--gr-surface);
+    border: 1px solid var(--gr-line);
+    border-radius: var(--gr-radius);
+    box-shadow: var(--gr-shadow-3);
+}
+.gr-places[hidden] { display: none; }
+.gr-places__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0.6em 0.8em;
+    border-radius: var(--gr-radius-s);
+    color: var(--gr-ink);
+    cursor: pointer;
+}
+.gr-places__item:hover, .gr-places__item[aria-selected="true"] { background: var(--gr-accent-soft); }
+.gr-places__main { font-weight: 600; }
+.gr-places__context { font-size: 0.875em; color: var(--gr-ink-3); }
+.gr-places__credit { margin: 0; padding: 0.35em 0.8em 0.1em; font-size: 0.75em; color: var(--gr-ink-3); text-align: right; }

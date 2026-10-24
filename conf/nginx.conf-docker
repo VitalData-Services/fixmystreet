@@ -5,6 +5,13 @@
 #
 # See our installation help at https://fixmystreet.org/
 
+# Address suggestions while typing (/places, web/cobrands/greece/place-search.js) come from
+# Photon, which allows search-as-you-type; Nominatim's usage policy does not. Only the query is
+# passed on, without the visitor's headers, cookies or address. Behind the Cloudflare tunnel every
+# request comes from the tunnel, so the rate limit is per visitor address in CF-Connecting-IP.
+proxy_cache_path /var/cache/nginx/places levels=1:2 keys_zone=places:5m max_size=50m inactive=7d;
+limit_req_zone $http_cf_connecting_ip zone=places_rate:5m rate=5r/s;
+
 server {
 
     listen 80 default_server;
@@ -33,6 +40,25 @@ server {
     location /mapit {
         proxy_pass https://mapit.mysociety.org/;
         proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location = /places {
+        limit_req zone=places_rate burst=10 nodelay;
+        resolver 127.0.0.11 valid=300s ipv6=off;
+        set $photon photon.komoot.io;
+        proxy_pass https://$photon/api/?q=$arg_q&limit=10&bbox=19.2,34.7,29.8,41.8;
+        proxy_ssl_server_name on;
+        proxy_pass_request_headers off;
+        proxy_set_header Host photon.komoot.io;
+        proxy_set_header User-Agent "FixMyStreets Greece (+https://fixmystreets.gr)";
+        proxy_set_header Accept application/json;
+        proxy_hide_header Set-Cookie;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 5s;
+        proxy_cache places;
+        proxy_cache_key $arg_q;
+        proxy_cache_valid 200 1d;
+        add_header Cache-Control "public, max-age=3600";
     }
 
     # Self-hosted map tiles and style (tiles compose service).
