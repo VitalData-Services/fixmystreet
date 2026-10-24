@@ -206,7 +206,12 @@ ALLOWED_COBRANDS:
 #     suggest_duplicates:
 #       buckinghamshire: 1
 #       oxfordshire: 1
-COBRAND_FEATURES: ''
+COBRAND_FEATURES:
+  # Emails to bodies (and from the contact form) come from our own address, which is
+  # DKIM-signed and in SPF, with the reporter in Reply-To. The reporter's own address in
+  # From would fail DMARC at the recipient, because we do not send for their domain.
+  always_use_reply_to:
+    greece: 1
 
 # How many items are returned in the GeoRSS and Open311 feeds by default
 RSS_LIMIT: '20'
@@ -223,7 +228,8 @@ TWITTER_SECRET: ''
 # If you wish to send email through a SMTP server elsewhere, change these
 # variables. SMTP_TYPE should be one of '', 'ssl' or 'tls'. SMTP_PORT will
 # default to 587 (tls), 465 (ssl), or 25.
-SMTP_SMARTHOST: 'localhost'
+# Greece: the host Postfix (DKIM for fixmystreets.gr, relay).
+SMTP_SMARTHOST: 'host.docker.internal'
 SMTP_TYPE: ''
 SMTP_PORT: ''
 SMTP_USERNAME: ''

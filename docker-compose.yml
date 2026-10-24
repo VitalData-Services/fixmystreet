@@ -23,6 +23,9 @@ services:
         condition: service_started
     cgroup: host
     stop_signal: SIGRTMIN+3
+    # Mail goes out through the host Postfix, which signs it (DKIM) and relays it.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./conf/general.yml-docker:/var/www/fixmystreet/fixmystreet/conf/general.yml
       - ./locale/el_GR.UTF-8/LC_MESSAGES:/var/www/fixmystreet/fixmystreet/locale/el_GR.UTF-8/LC_MESSAGES:ro

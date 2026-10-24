@@ -76,10 +76,33 @@ recipient, if it is the wrong one, to send the right one to `CONTACT_EMAIL` as
 `signature.txt` and `site-name.txt` apply to every email. Other emails still fall back to the
 English `templates/email/default`.
 
+Emails to bodies come from the site's own address with the reporter in Reply-To
+(`always_use_reply_to` in `COBRAND_FEATURES`): with the reporter's address in From, they would fail
+DMARC at the recipient, because the site does not send for the reporter's domain.
+
 A category can use its own email template: set `email_template` in the contact's extra metadata
 (e.g. `amea`), and `submit.txt`/`submit.html` hand over to `submit-amea.txt`/`submit-amea.html`.
 `amea` is the complaint letter to the police about disabled (ΑμεΑ) and EV-charging bays, built from
 the category's questions (`_amea_vars.txt`); it asks for corrections as `MAIL ΥΠΗΡΕΣΙΑΣ:<address>`.
+
+## Outgoing mail
+
+The app container does not deliver mail itself: `SMTP_SMARTHOST` is `host.docker.internal`
+(`extra_hosts: host-gateway` in `docker-compose.yml`), the Postfix of the host. That Postfix is set
+up outside this repository:
+
+- It accepts mail only from the host and the Docker networks (`mynetworks = 127.0.0.0/8
+  172.16.0.0/12`) and relays all of it to an SMTP relay whose address has a matching PTR and is in
+  the domain's SPF.
+- OpenDKIM signs mail from `@fixmystreets.gr` with selector `fms2026`; the public key is the TXT
+  record `fms2026._domainkey.fixmystreets.gr`. Mail from the Docker networks is listed as internal
+  (`InternalHosts`), otherwise OpenDKIM would only verify it. Do not publish the `h=rsa-sha256` tag
+  that `opendkim-genkey -h rsa-sha256` writes into the record: `h=` takes hash names (`sha256`).
+- Until `EMAIL_DOMAIN` and `DO_NOT_REPLY_EMAIL` are at fixmystreets.gr, the site's mail is not
+  signed. Mail sent as `DO_NOT_REPLY_EMAIL` still passes SPF; report emails, sent as a VERP
+  address at `EMAIL_DOMAIN`, pass neither SPF nor DKIM.
+- Incoming mail for fixmystreets.gr goes to the domain's mail host, not to this server, so bounces
+  to the VERP addresses are not processed.
 
 ## Municipality categories
 
