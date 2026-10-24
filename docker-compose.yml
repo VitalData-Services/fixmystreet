@@ -48,6 +48,9 @@ services:
       - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro
       # App icons of the installable web app (manifest theme icons are read from web/theme/<cobrand>).
       - ./web/theme/greece:/var/www/fixmystreet/fixmystreet/web/theme/greece:ro
+      # SEO: served by Catalyst static from the image web root; edit in place (single-file mounts)
+      - ./web/robots.txt:/var/www/fixmystreet/fixmystreet/web/robots.txt:ro
+      - ./web/sitemap.xml:/var/www/fixmystreet/fixmystreet/web/sitemap.xml:ro
       # Uploaded photos (UPLOAD_DIR '../upload/') and the caches must outlive the container: without
       # these, recreating it lost every report's photo (2026-10-24).
       - fixmystreet-upload:/var/www/fixmystreet/upload

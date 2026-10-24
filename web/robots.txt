@@ -1,4 +1,11 @@
 User-agent: *
 Disallow: /photo/
 Disallow: /report/new
+Disallow: /auth
+Disallow: /my
+Disallow: /admin
+Disallow: /alert
+Disallow: /contact
 Crawl-delay: 3
+
+Sitemap: https://fixmystreets.gr/sitemap.xml
