@@ -61,18 +61,9 @@ QUESTIONS = {
              {"key": "empodia", "name": "Παράνομα εμπόδια ή κώνοι από κατάστημα"},
              {"key": "p72", "name": "Αυθαίρετη ή μη εγκεκριμένη διαγράμμιση και πινακίδα P-72"},
          ]},
-        {"code": "syxnotita", "variable": "true", "order": 2, "datatype": "singlevaluelist", "required": "false",
-         "description": "Πόσο συχνά συμβαίνει;",
-         "values": [
-             {"key": "mia", "name": "Μία φορά"},
-             {"key": "epanalamvanomeni", "name": "Επαναλαμβάνεται"},
-             {"key": "monimi", "name": "Μόνιμα"},
-         ]},
         # Filled in from the photo where a plate is read (camera.js); the reporter can correct it.
-        {"code": "pinakida", "variable": "true", "order": 3, "datatype": "string", "required": "false",
+        {"code": "pinakida", "variable": "true", "order": 2, "datatype": "string", "required": "false",
          "description": "Αριθμός κυκλοφορίας (πινακίδα), αν αφορά συγκεκριμένο όχημα"},
-        {"code": "oxima", "variable": "true", "order": 4, "datatype": "string", "required": "false",
-         "description": "Άλλα στοιχεία του οχήματος (μάρκα, χρώμα)"},
     ],
 }
 NO_QUESTIONS = {"email_template": "ev"}

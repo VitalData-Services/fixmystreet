@@ -52,7 +52,7 @@
                 if (el.checked) { values[el.name] = el.value; } else if (el.type === 'checkbox' && !(el.name in values)) { values[el.name] = null; }
             } else if (el.value !== '') {
                 values[el.name] = el.value;
-                any = any || /^(detail|pinakida|oxima)$/.test(el.name);
+                any = any || /^(detail|pinakida)$/.test(el.name);
             }
         });
         var category = form.querySelector('input[name=category]:checked');

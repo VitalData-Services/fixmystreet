@@ -1,11 +1,9 @@
 [%# Minimap that centres on the visitor's location, so a report can start without typing an address.
     It outlines the municipality under the pin and shows its contact details.
-    Hidden until minimap.js confirms geolocation, WebGL and the basemap style are available. %]
-[% gr_minimap_css = BLOCK %]
-<link rel="stylesheet" href="[% version('/cobrands/greece/vendor/maplibre-gl-4.7.1/maplibre-gl.css') %]">
-<link rel="stylesheet" href="[% version('/cobrands/greece/minimap.css') %]">
-[% END %]
-[% extra_css = extra_css _ gr_minimap_css %]
+    Hidden until minimap.js confirms geolocation, WebGL and the basemap style are available.
+    Its CSS is loaded by header/css.html on every page: set here, it came too late on pages that
+    print the header first (e.g. /around with several matching places), and without a height the
+    map and its box grew each other forever. %]
 <div class="gr-minimap" id="gr-minimap-box" data-dimoi="/cobrands/greece/dimoi/" hidden>
     <div class="gr-minimap__frame">
         <div class="gr-minimap__map" id="gr-minimap" role="application" aria-label="Χάρτης για την επιλογή σημείου"></div>
