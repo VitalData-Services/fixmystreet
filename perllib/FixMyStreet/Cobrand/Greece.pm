@@ -237,6 +237,44 @@ sub greece_bad_words {
     }
 }
 
+# Updates get the same filter. FixMyStreet has no hook before an update is saved, but calls
+# process_open311_extras for an update once its text is set: mask the words there, and with
+# GREECE_MODERATE or more keep the update from changing the report's state. Once it is saved and
+# confirmed, update_email_shortlisted_user hides it and tells the contact address (below).
+sub process_open311_extras {
+    my ($self, $c, $body, $extra) = @_;
+    return unless $c && $c->action && $c->action->namespace eq 'report/update' && $c->req->method eq 'POST';
+    my $update = $c->stash->{update} or return;
+    my $count = 0;
+    for my $field (qw(text name)) {
+        my ($masked, $n) = greece_mask_bad_words($update->$field);
+        next unless $n;
+        $update->$field($masked);
+        $count += $n;
+    }
+    return unless $count;
+    $update->set_extra_metadata(greece_bad_words => $count);
+    if ($count >= GREECE_MODERATE) {
+        $update->mark_fixed(0);
+        $update->mark_open(0);
+        $update->problem_state($c->stash->{problem}->state) if $c->stash->{problem};
+    }
+}
+
+sub update_email_shortlisted_user {
+    my ($self, $update) = @_;
+    my $count = $update->get_extra_metadata('greece_bad_words') or return;
+    return unless $count >= GREECE_MODERATE && $update->state ne 'hidden';
+    $update->update({ state => 'hidden' });
+    my $c = $self->{c} or return;
+    $c->send_email('moderation-update.txt', {
+        to => [ $self->contact_email ],
+        update => $update,
+        report => $update->problem,
+        admin_url => $c->cobrand->base_url . '/admin/update_edit/' . $update->id,
+    });
+}
+
 # A report held for a moderator: tell the site's contact address, with the admin link.
 sub greece_moderation_email {
     my ($self, $report) = @_;
