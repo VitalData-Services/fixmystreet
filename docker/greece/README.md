@@ -96,6 +96,15 @@ listed last.
 (332), from the ΥΠΕΣ list of 14/08/2026 and the ΚΕΔΕ catalogue 2024-2028, with every other address
 they give, whether the two agree, and an MX check of the domain (mailboxes were not tested).
 
+Every other municipality gets the same six categories, all to that address, from
+`data/greece/contacts/dimoi.sql`, which `bin/greece/dimoi-sql.py` builds from the CSV. Municipalities
+with their own file (`OWN_FILE` in the script, e.g. Haidari) are skipped. Re-running the file
+overwrites admin edits to those six categories, so an address a municipality sends with
+`MAIL ΔΗΜΟΥ:` goes into a corrections CSV passed to the script (columns `name_el`,
+`email_recommended`, `email_source`), not into the admin. Where MapIt has one area for several
+municipalities (Corfu, Kefalonia), a report goes to all of them, with FixMyStreet's note that it was
+sent to several bodies.
+
 Disabled (ΑμεΑ) and EV-charging bays go to the police rather than the municipality, in every
 municipality. A body per police unit covers the areas of the municipalities it serves and owns that
 category, so a report goes in one email to two units:
