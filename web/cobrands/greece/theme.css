@@ -562,3 +562,23 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
 
 /* Report form: no "Or search for a different location" link under the map hint. */
 .change_location__search { display: none; }
+
+/* "Συμπληρώσαμε ό,τι είχες γράψει πριν" above the description (form-draft.js) */
+.gr-draft-notice {
+    margin: 0 0 0.5em;
+    padding: 0.5em 0.75em;
+    font-size: 0.9375em;
+    background: var(--gr-surface);
+    border: 1px solid var(--gr-line);
+    border-radius: var(--gr-radius-s);
+}
+.gr-draft-notice__clear {
+    margin-left: 0.25em;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}

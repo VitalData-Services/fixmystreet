@@ -6,4 +6,6 @@
     scripts.push(version('/cobrands/fixmystreet/assets.js'));
     scripts.push(version('/cobrands/greece/camera.js'));
 END ~%]
-[% scripts.push(version('/cobrands/greece/place-search.js')) ~%]
+[%# form-draft.js keeps the report form's text if the reporter leaves it by mistake, and forgets
+    it on the confirmation page, so it is on every page. ~%]
+[% scripts.push(version('/cobrands/greece/place-search.js'), version('/cobrands/greece/form-draft.js')) ~%]
