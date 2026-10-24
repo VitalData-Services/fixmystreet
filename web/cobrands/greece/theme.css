@@ -660,3 +660,8 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
     #form_category_fieldset legend, .js-reporting-page legend, #map_sidebar .govuk-fieldset__legend { font-size: 1rem; }
 }
 
+/* Language switch in the menu: set apart from the rest. */
+@media (min-width: 48em) {
+    .nav-menu--main .nav-menu__item--lang a { border: 1px solid rgba(255, 255, 255, 0.35); padding-top: 0.35em; padding-bottom: 0.35em; margin-left: 6px; }
+}
+

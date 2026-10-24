@@ -10,6 +10,10 @@
  */
 (function() {
     'use strict';
+    // The page's language (the menu's switch): English texts when it is English.
+    var EN = /^en/i.test(document.documentElement.lang || '');
+    function t(el, en) { return EN ? en : el; }
+
 
     var KEY = 'gr-report-draft';
     var MAX_AGE = 24 * 3600 * 1000;
@@ -120,7 +124,8 @@
         notice = document.createElement('p');
         notice.className = 'gr-draft-notice';
         notice.setAttribute('role', 'status');
-        notice.innerHTML = 'Συμπληρώσαμε ό,τι είχες γράψει πριν. <button type="button" class="gr-draft-notice__clear">Καθαρισμός</button>';
+        notice.innerHTML = t('Συμπληρώσαμε ό,τι είχες γράψει πριν.', 'We filled in what you had written before.') +
+            ' <button type="button" class="gr-draft-notice__clear">' + t('Καθαρισμός', 'Clear') + '</button>';
         // "Καθαρισμός" empties the description and the photos and forgets the draft.
         notice.querySelector('button').addEventListener('click', function() {
             forget();
