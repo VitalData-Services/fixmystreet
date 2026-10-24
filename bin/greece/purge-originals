@@ -1,0 +1,46 @@
+#!/usr/bin/env perl
+# Deletes the police copies of photos (plates readable; ORIGINALS_DIR, see
+# FixMyStreet::PhotoStorage::Greece) once they can no longer be needed:
+#   - every report with the photo has been sent (whensent), so the police letter has gone;
+#   - no report has the photo a day after it was uploaded (an upload never used, or an update's);
+#   - in any case 30 days after it was uploaded (e.g. a report hidden for moderation).
+# A report sent again later gets the blurred photo.
+#
+# Runs inside the app container, from the host's cron every 15 minutes:
+#   docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - [--dry-run] \
+#       < /opt/fixmystreet/bin/greece/purge-originals
+
+use strict;
+use warnings;
+
+use FixMyStreet;
+use FixMyStreet::DB;
+use Path::Tiny 'path';
+
+my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
+my $cfg = FixMyStreet->config('PHOTO_STORAGE_OPTIONS') || {};
+my $dir = path($cfg->{ORIGINALS_DIR} || '/var/lib/fms-originals');
+exit 0 unless $dir->is_dir;
+
+my $dbh = FixMyStreet::DB->schema->storage->dbh;
+my $now = time;
+my %done;
+for my $file ($dir->children(qr/\A[0-9a-f]{40}\.jpeg\z/)) {
+    my $name = $file->basename;
+    my $age = $now - $file->stat->mtime;
+    # problem.photo holds the report's photo file names, comma-separated.
+    my $reports = $dbh->selectall_arrayref(
+        "SELECT id, whensent FROM problem WHERE position(convert_to(?, 'UTF8') in photo) > 0", undef, $name);
+    my $unsent = grep { !defined $_->[1] } @$reports;
+    my $why =
+        $age > 30 * 86400            ? 'older than 30 days'
+      : @$reports && !$unsent        ? 'report sent (' . join(',', map { $_->[0] } @$reports) . ')'
+      : !@$reports && $age > 86400   ? 'in no report after a day'
+      :                                undef;
+    next unless $why;
+    $done{$why =~ /^report sent/ ? 'report sent' : $why}++;
+    print "$name: $why", ($dry_run ? ' (dry run)' : ''), "\n";
+    $file->remove unless $dry_run;
+}
+print scalar(localtime), ': ', (join(', ', map { "$done{$_} $_" } sort keys %done) || 'nothing to delete'),
+    ($dry_run ? ' (dry run)' : ''), "\n" if %done || $dry_run;

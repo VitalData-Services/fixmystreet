@@ -188,3 +188,30 @@ after creating one, run `docker exec -u root fixmystreet-fixmystreet-1 chown fms
 /var/www/fixmystreet/upload /var/www/fixmystreet/cache`. Before these volumes, recreating the
 container deleted every uploaded photo.
 
+## Photos: plates and faces blurred
+
+Every photo is anonymised before it is stored (`PHOTO_STORAGE_BACKEND: 'Greece'`,
+`perllib/FixMyStreet/PhotoStorage/Greece.pm`): the app sends each JPEG to the `anonymiser` service
+(`docker/greece/anonymiser`: fast-alpr for number plates and their text, YuNet for faces, no
+network access needed after the build), and what it stores, shows and sends to municipalities is
+the copy with plates and faces blurred (EXIF removed).
+
+- When something was found, the copy with only the faces blurred, plates readable, is kept under
+  the same file name in `ORIGINALS_DIR` (`/var/lib/fms-originals`, volume
+  `fixmystreet-originals`, owned by the app user). Nothing serves that directory: only the police
+  letters attach it (`report.greece_photos('police')` in `_ev_vars.txt` and `_amea_vars.txt`).
+- The photo boxes upload to `/greece/photo/upload` (`App::Controller::GreecePhoto`), which answers
+  like `/photo/upload` plus the plates read; `camera.js` fills the plate question with the first one
+  if it is empty, with a note to check it. Nobody else can ask for the plates later.
+- If the anonymiser does not answer, the upload fails («Το ανέβασμα της φωτογραφίας απέτυχε.»):
+  no photo is ever stored unblurred.
+- `bin/greece/purge-originals` deletes the police copies once every report with the photo has
+  been sent, a day after upload when no report has the photo, and in any case after 30 days. It
+  runs from the host's `/etc/cron.d/fixmystreets-purge-originals` every 15 minutes (log in
+  `/var/log/fixmystreets/`), piped into the container, so it needs no mount; `--dry-run` lists
+  what it would delete.
+
+Tests: `docker run --rm -v "$PWD/docker/greece/anonymiser/tests:/app/tests:ro" fixmystreets-anonymiser
+sh -c "pip install -q pytest && cd /app && python -m pytest -q tests"` (25 tests, with Wikimedia
+Commons photos, see `tests/fixtures/LICENSES.md`).
+

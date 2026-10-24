@@ -38,6 +38,11 @@ services:
       - ./perllib/Utils.pm:/var/www/fixmystreet/fixmystreet/perllib/Utils.pm:ro
       # 👍/👎 on reports (POST /greece/vote/<id>).
       - ./perllib/FixMyStreet/App/Controller/GreeceVote.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceVote.pm:ro
+      # Photos are anonymised before they are stored (anonymiser service below); the police copies,
+      # with plates readable, stay on their own volume until their report is sent.
+      - ./perllib/FixMyStreet/PhotoStorage/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/PhotoStorage/Greece.pm:ro
+      - ./perllib/FixMyStreet/App/Controller/GreecePhoto.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreecePhoto.pm:ro
+      - fixmystreet-originals:/var/lib/fms-originals
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
       - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro
@@ -97,6 +102,23 @@ services:
       default:
         aliases:
           - memcached.svc
+  # Blurs number plates and faces in every uploaded photo and reads the plates (docker/greece/anonymiser);
+  # only the app talks to it.
+  anonymiser:
+    build: ./docker/greece/anonymiser
+    image: fixmystreets-anonymiser:latest
+    restart: unless-stopped
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      default:
+        aliases:
+          - anonymiser.svc
   # Municipality lookups answered locally where certain, else by global MapIt (docker/mapit-local);
   # FixMyStreet uses it through MAPIT_URL in conf/general.yml-local.
   mapit-local:
@@ -128,3 +150,4 @@ volumes:
   fixmystreet-pgdata:
   fixmystreet-upload:
   fixmystreet-cache:
+  fixmystreet-originals:
