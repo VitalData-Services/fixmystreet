@@ -347,6 +347,7 @@ a.platform-logo { filter: invert(0.72); }
 #key-tools a:hover, #key-tools a:focus, #key-tools button:hover, #key-tools button:focus { background-color: var(--gr-ink); }
 h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); background: var(--gr-surface-2); }
 .dropzone { background-color: var(--gr-accent-soft); border-color: #9db8ee; border-radius: var(--gr-radius); }
+.dropzone:hover, .dropzone.dz-drag-hover { background-color: #dde7fd; border-color: var(--gr-accent); }
 .dz-clickable .dz-message u { background: var(--gr-accent); color: #fff; border-color: var(--gr-accent); border-radius: var(--gr-radius-s); }
 .dz-clickable .dz-message u:hover, .dz-clickable .dz-message u:focus { background: var(--gr-accent-hover); color: #fff; border-color: var(--gr-accent-hover); }
 .segmented-control--radio input:checked + label { background: var(--gr-accent-soft); border-color: var(--gr-accent); color: var(--gr-accent-ink) !important; box-shadow: none; }
@@ -475,3 +476,42 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
     border: 1px solid var(--gr-line);
     border-radius: var(--gr-radius-s);
 }
+
+/* "Τράβηξε φωτογραφία" under the photo upload box (camera.js) */
+
+.gr-camera-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0.75em 0 0.25em;
+}
+.gr-camera-btn svg, .gr-camera__shutter svg { flex: none; }
+.gr-camera {
+    width: min(760px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 12px;
+    border: 0;
+    border-radius: var(--gr-radius-l);
+    background: var(--gr-surface);
+    color: var(--gr-ink);
+    box-shadow: var(--gr-shadow-3);
+}
+.gr-camera::backdrop { background: rgba(8, 15, 30, 0.6); backdrop-filter: blur(3px); }
+.gr-camera__frame {
+    overflow: hidden;
+    border-radius: var(--gr-radius);
+    background: #0b1220;
+    aspect-ratio: 16 / 9;
+}
+.gr-camera__video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.gr-camera__status { margin: 0.75em 0.25em 0; color: var(--gr-ink-2); line-height: 1.5; }
+.gr-camera__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5em;
+    margin-top: 12px;
+}
+.gr-camera__actions .btn { margin: 0; }
+.gr-camera [hidden] { display: none !important; }
+.gr-camera__shutter { display: inline-flex; align-items: center; gap: 0.5em; }
