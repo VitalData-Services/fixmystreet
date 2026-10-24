@@ -33,17 +33,62 @@ sub munge_sendreport_params {
     $h->{email_template} = $template if $template =~ /^[a-z]+$/;
 
     # The municipality of the location, for emails to a body that is not the municipality.
-    my @areas = grep { $_ } split /,/, ($row->areas || '');
-    my $dimos = @areas && FixMyStreet::DB->resultset('Body')->search(
-        { 'body_areas.area_id' => \@areas, 'me.name' => { -like => 'Δήμος %' }, 'me.deleted' => 0 },
-        { join => 'body_areas', order_by => 'me.id' })->first;
+    my $dimos = $row->greece_dimos;
     $h->{dimos_name} = $dimos->name if $dimos;
 }
+
+# Police complaints (disabled and EV-charging bays) can also be sent by the reporter as an SMS
+# from their own phone; see Problem::greece_sms.
+sub greece_sms_number { '100' }
 
 package FixMyStreet::DB::Result::Problem;
 
 use strict;
 use warnings;
+use utf8;
+
+# The municipality body covering the report's location.
+sub greece_dimos {
+    my $self = shift;
+    my @areas = grep { $_ } split /,/, ($self->areas || '');
+    return unless @areas;
+    return FixMyStreet::DB->resultset('Body')->search(
+        { 'body_areas.area_id' => \@areas, 'me.name' => { -like => 'Δήμος %' }, 'me.deleted' => 0 },
+        { join => 'body_areas', order_by => 'me.id' })->first;
+}
+
+# For a police complaint, the SMS the reporter can send from their phone: { number, body }.
+# The body names the violation (as worded in the category's question), the place and the
+# vehicle, and gives the report reference. Nothing for other categories.
+sub greece_sms {
+    my ($self, $cobrand) = @_;
+    my $contact = $self->contact;
+    return unless $contact && ($contact->get_extra_metadata('email_template') || '') eq 'amea';
+
+    my %answer = map { $_->{name} => $_->{value} } @{ $self->get_extra_fields };
+    my ($question) = grep { $_->{code} eq 'paravasi' } @{ $contact->get_extra_fields };
+    my ($choice) = grep { $_->{key} eq ($answer{paravasi} // '') } @{ $question ? $question->{values} || [] : [] };
+    my $violation = $choice ? $choice->{name} : 'Παράνομη στάθμευση σε θέση ΑμεΑ ή φόρτισης ηλεκτρικών οχημάτων';
+
+    my $address = $cobrand ? $cobrand->find_closest($self) : FixMyStreet::Geocode::Address->new($self->geocode);
+    my $parts = $address->parts;
+    my $osm = $address->{address} || {};
+    my $place = $osm->{suburb} || $osm->{neighbourhood} || $osm->{city} || $osm->{town} || $osm->{village};
+    unless ($place) {
+        my $dimos = $self->greece_dimos;
+        ($place = $dimos->name) =~ s/^Δήμος // if $dimos;
+    }
+    my $where = join ', ', grep { $_ } join(' ', grep { $_ } $parts->{street}, $parts->{number}), $place;
+    my $coords = sprintf '%.5f, %.5f', $self->latitude, $self->longitude;
+
+    my @lines = ("Καταγγελία: $violation.");
+    push @lines, 'Θέση: ' . ($where ? "$where ($coords)" : $coords) . '.';
+    (my $vehicle = $answer{oxima} // '') =~ s/^\s+|\s+$//g;
+    push @lines, "Όχημα: $vehicle." if $vehicle;
+    (my $site = FixMyStreet->config('BASE_URL')) =~ s{^https?://}{};
+    push @lines, 'Αρ. αναφοράς ' . $self->greece_ref . " ($site).";
+    return { number => FixMyStreet::Cobrand::Greece->greece_sms_number, body => join("\n", @lines) };
+}
 
 # Public reference DDMMYYYY-N: the local (TIME_ZONE) date the report was created and its
 # position among all reports created that day. `created` holds wall-clock time in the
