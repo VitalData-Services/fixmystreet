@@ -26,11 +26,15 @@ sub munge_sendreport_params {
     # The address the email went to, so the recipient can send us a better one.
     $h->{sent_to} = join ', ', map { ref $_ ? $_->[0] : $_ } @{ $params->{To} || [] };
 
-    # A category can have its own email (contact extra metadata email_template, e.g. "amea"
-    # for the police complaint about disabled or EV-charging bays); submit.txt hands over to it.
+    # A category can have its own email (contact extra metadata email_template: "ev" for the police
+    # complaint about EV-charging bays and blocked passage, "amea" for disabled bays, ramps,
+    # pavements and crossings); submit.txt hands over to submit-<template>.txt.
     my $contact = $row->contact;
     my $template = ($contact && $contact->get_extra_metadata('email_template')) || '';
     $h->{email_template} = $template if $template =~ /^[a-z]+$/;
+
+    # The location as a Google Maps link, which the police letters give instead of coordinates.
+    $h->{gmaps_url} = sprintf 'https://www.google.com/maps/search/?api=1&query=%.6f,%.6f', $row->latitude, $row->longitude;
 
     # The municipality of the location, for emails to a body that is not the municipality.
     my $dimos = $row->greece_dimos;
@@ -198,6 +202,14 @@ sub greece_moderation_email {
     });
 }
 
+# The reports page («Εμφάνιση αναφορών ανά περιοχή») offers only the municipalities: a police unit
+# covers several of them, and choosing one would show most of the map.
+sub reports_hook_restrict_bodies_list {
+    my ($self, $bodies) = @_;
+    # Reports.pm passes all_sorted's hashes, not Body rows.
+    return [ grep { (ref $_ eq 'HASH' ? $_->{name} : $_->name) =~ /^Δήμος / } @$bodies ];
+}
+
 # Who is voting 👍/👎 on a report (App::Controller::GreeceVote, Problem::greece_votes): a signed-in
 # voter is their account; anyone else is a random id in a long-lived cookie, kept here only as its
 # hash. Undef when there is none yet and $create is false.
@@ -250,6 +262,10 @@ sub greece_dimos {
 # The SMS sentence for each answer to "Τι συμβαίνει;": what a vehicle does ("Όχημα ..."), or
 # what is there.
 my %SMS_VEHICLE = (
+    xoris_karta => 'καταλαμβάνει θέση στάθμευσης ΑμεΑ χωρίς Μπλε Κάρτα',
+    rampa => 'καταλαμβάνει ράμπα ΑμεΑ',
+    pezodromio => 'είναι σταθμευμένο στο πεζοδρόμιο και εμποδίζει τους πεζούς',
+    diavasi => 'είναι σταθμευμένο σε διάβαση πεζών',
     fortistis => 'καταλαμβάνει θέση φόρτισης ηλεκτρικών οχημάτων χωρίς να φορτίζει',
     eisodos => 'κλείνει είσοδο οχημάτων (γκαράζ)',
     diplo => 'είναι σταθμευμένο διπλά και κλείνει τον δρόμο',
@@ -323,7 +339,7 @@ sub greece_recipients {
 sub greece_sms {
     my ($self, $cobrand) = @_;
     my $contact = $self->contact;
-    return unless $contact && ($contact->get_extra_metadata('email_template') || '') eq 'amea';
+    return unless $contact && ($contact->get_extra_metadata('email_template') || '') =~ /^(?:ev|amea)$/;
 
     my $paravasi = $self->get_extra_field_value('paravasi') // '';
     my $address = $self->greece_address($cobrand);

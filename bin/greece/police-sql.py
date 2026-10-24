@@ -48,7 +48,7 @@ NAMES = {
 }
 
 QUESTIONS = {
-    "email_template": "amea",
+    "email_template": "ev",
     "_fields": [
         {"code": "idiotiki", "variable": "false", "order": 0, "datatype": "string", "required": "false",
          "description": "Οι αναφορές αυτής της κατηγορίας δεν δημοσιεύονται στον ιστότοπο. Στέλνονται, με το όνομα και τα στοιχεία επικοινωνίας σας, μόνο στην αρμόδια υπηρεσία της Ελληνικής Αστυνομίας."},
@@ -75,11 +75,13 @@ QUESTIONS = {
          "description": "Άλλα στοιχεία του οχήματος (μάρκα, χρώμα)"},
     ],
 }
-NO_QUESTIONS = {"email_template": "amea"}
+NO_QUESTIONS = {"email_template": "ev"}
 
 # FixMyStreet shows a disable_form field's text instead of the rest of the form and does not take
 # the report.
+# Its letter (email_template "amea", submit-amea.txt) is for when it is sent to the police again.
 XORISEMPODIA = {
+    "email_template": "amea",
     "_fields": [
         {"code": "xorisempodia", "variable": "false", "disable_form": "true", "order": 0, "datatype": "string",
          "required": "false",
@@ -213,7 +215,7 @@ def main(dimoi_path, units_path, out_path):
 -- Each municipality's area is covered by a station or directorate body and, where one is known,
 -- a Τμήμα Τροχαίας body, both with the category below, so a report is sent to both in one email.
 -- The category is private (non_public), because a complaint can name a vehicle; the email is the
--- complaint letter in submit-amea.txt/html, chosen by email_template.
+-- complaint letter in submit-ev.txt/html, chosen by email_template.
 -- The station or directorate body also has the ΑμεΑ category, which only links to xorisempodia.gr
 -- (disable_form): FixMyStreet takes no report in it, so its e-mail is never used.
 -- Police bodies are tagged greece_police in body.extra. Re-running replaces their areas with the

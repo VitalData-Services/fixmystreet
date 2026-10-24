@@ -610,3 +610,8 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
 .gr-vote:disabled { opacity: 0.6; cursor: wait; }
 .gr-votes__status { flex-basis: 100%; font-size: 0.875em; color: #a1260d; }
 .gr-votes__status:empty { display: none; }
+
+/* The logo links to the home page. On wide screens the menu's wrapper spans the whole header, over
+   the logo, and took its clicks: the wrapper lets clicks through, its menu still takes them. */
+.nav-wrapper { pointer-events: none; }
+.nav-wrapper * { pointer-events: auto; }

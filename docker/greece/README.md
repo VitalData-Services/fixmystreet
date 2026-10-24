@@ -89,8 +89,10 @@ DMARC at the recipient, because the site does not send for the reporter's domain
 
 A category can use its own email template: set `email_template` in the contact's extra metadata
 (e.g. `amea`), and `submit.txt`/`submit.html` hand over to `submit-amea.txt`/`submit-amea.html`.
-`amea` is the complaint letter to the police about parking on EV-charging bays or that blocks the
-way, built from the category's questions (`_amea_vars.txt`); it asks for corrections as
+`ev` is the complaint letter to the police about parking on EV-charging bays or that blocks the
+way, built from the category's questions (`_ev_vars.txt`); `amea` the one about disabled bays,
+ramps, pavements and crossings (`_amea_vars.txt`), unused while that category links to
+xorisempodia.gr. Both give the place as a Google Maps link and ask for corrections as
 `MAIL ΥΠΗΡΕΣΙΑΣ:<address>`.
 
 ## Outgoing mail
