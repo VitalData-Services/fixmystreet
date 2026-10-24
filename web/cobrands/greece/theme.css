@@ -477,7 +477,7 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
     border-radius: var(--gr-radius-s);
 }
 
-/* "Τράβηξε φωτογραφία" and "Από τη συλλογή" under the photo upload box (camera.js) */
+/* «Λήψη» under the photo upload box (camera.js) */
 
 .gr-photo-actions {
     display: flex;
@@ -559,3 +559,6 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
 .gr-places__main { font-weight: 600; }
 .gr-places__context { font-size: 0.875em; color: var(--gr-ink-3); }
 .gr-places__credit { margin: 0; padding: 0.35em 0.8em 0.1em; font-size: 0.75em; color: var(--gr-ink-3); text-align: right; }
+
+/* Report form: no "Or search for a different location" link under the map hint. */
+.change_location__search { display: none; }
