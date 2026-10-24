@@ -12,6 +12,21 @@
 proxy_cache_path /var/cache/nginx/places levels=1:2 keys_zone=places:5m max_size=50m inactive=7d;
 limit_req_zone $http_cf_connecting_ip zone=places_rate:5m rate=5r/s;
 
+# Reports need no account or email confirmation, so submissions are limited per visitor: POSTs
+# that create a report or an update, or send an email to an address typed into a form (sign-in,
+# password reset, alerts, contact), share one budget of 6 at once, then one every 30 seconds.
+# Anything else gets an empty key, which nginx does not count. A request that did not come
+# through Cloudflare counts by its own address.
+map $http_cf_connecting_ip $visitor {
+    ""      $remote_addr;
+    default $http_cf_connecting_ip;
+}
+map "$request_method $uri" $form_post_visitor {
+    default "";
+    "~*^POST /(report/new(/mobile)?|import|report/update|auth(/create|/forgot|/ajax/sign_in)?|alert/subscribe|contact/submit)/?$" $visitor;
+}
+limit_req_zone $form_post_visitor zone=form_posts:5m rate=2r/m;
+
 server {
 
     listen 80 default_server;
@@ -80,7 +95,16 @@ server {
         internal;
     }
 
+    location @too_many {
+        default_type "text/html; charset=utf-8";
+        add_header Retry-After 60 always;
+        return 429 '<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Πολλές υποβολές</title><style>body{font-family:system-ui,sans-serif;max-width:36em;margin:3em auto;padding:0 16px;line-height:1.5;color:#0c1b33;background:#f3f5fa}</style></head><body><h1>Πολλές υποβολές σε λίγο χρόνο</h1><p>Από τη σύνδεσή σου στάλθηκαν πολλές φόρμες μέσα σε λίγα λεπτά. Περίμενε ένα λεπτό, γύρνα πίσω με το κουμπί «Πίσω» του φυλλομετρητή και στείλε ξανά τη φόρμα.</p><p><a href="/">Αρχική σελίδα</a></p></body></html>';
+    }
+
     location @catalyst {
+        limit_req zone=form_posts burst=5 nodelay;
+        limit_req_status 429;
+        error_page 429 @too_many;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $host;
