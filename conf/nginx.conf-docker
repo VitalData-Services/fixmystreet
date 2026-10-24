@@ -23,7 +23,7 @@ map $http_cf_connecting_ip $visitor {
 }
 map "$request_method $uri" $form_post_visitor {
     default "";
-    "~*^POST /(report/new(/mobile)?|import|report/update|auth(/create|/forgot|/ajax/sign_in)?|alert/subscribe|contact/submit)/?$" $visitor;
+    "~*^POST /(report/new(/mobile)?|import|report/update|auth(/create|/forgot|/ajax/sign_in)?|alert/subscribe|contact/submit|greece/auth)/?$" $visitor;
 }
 limit_req_zone $form_post_visitor zone=form_posts:5m rate=2r/m;
 
