@@ -50,6 +50,7 @@ QUESTIONS = {
          "description": "Τι συμβαίνει;",
          "values": [
              {"key": "xoris_karta", "name": "Στάθμευση σε θέση ΑμεΑ χωρίς την ειδική Μπλε Κάρτα"},
+             {"key": "rampa", "name": "Στάθμευση σε ράμπα ΑμεΑ"},
              {"key": "fortistis", "name": "Στάθμευση σε θέση φόρτισης ηλεκτρικών οχημάτων χωρίς φόρτιση"},
              {"key": "empodia", "name": "Παράνομα εμπόδια ή κώνοι από κατάστημα"},
              {"key": "p72", "name": "Αυθαίρετη ή μη εγκεκριμένη διαγράμμιση και πινακίδα P-72"},
@@ -61,8 +62,11 @@ QUESTIONS = {
              {"key": "epanalamvanomeni", "name": "Επαναλαμβάνεται"},
              {"key": "monimi", "name": "Μόνιμα"},
          ]},
-        {"code": "oxima", "variable": "true", "order": 3, "datatype": "string", "required": "false",
-         "description": "Στοιχεία οχήματος, αν αφορά συγκεκριμένο όχημα (μάρκα, χρώμα, αριθμός κυκλοφορίας)"},
+        # Filled in from the photo where a plate is read (camera.js); the reporter can correct it.
+        {"code": "pinakida", "variable": "true", "order": 3, "datatype": "string", "required": "false",
+         "description": "Αριθμός κυκλοφορίας (πινακίδα), αν αφορά συγκεκριμένο όχημα"},
+        {"code": "oxima", "variable": "true", "order": 4, "datatype": "string", "required": "false",
+         "description": "Άλλα στοιχεία του οχήματος (μάρκα, χρώμα)"},
     ],
 }
 NO_QUESTIONS = {"email_template": "amea"}

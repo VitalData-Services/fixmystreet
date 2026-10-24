@@ -57,37 +57,100 @@ sub greece_dimos {
         { join => 'body_areas', order_by => 'me.id' })->first;
 }
 
-# For a police complaint, the SMS the reporter can send from their phone: { number, body }.
-# The body names the violation (as worded in the category's question), the place and the
-# vehicle, and gives the report reference. Nothing for other categories.
-sub greece_sms {
+# The SMS sentence for each answer to "Τι συμβαίνει;": what a vehicle does ("Όχημα ..."), or
+# what is there.
+my %SMS_VEHICLE = (
+    xoris_karta => 'καταλαμβάνει θέση στάθμευσης ΑμεΑ χωρίς Μπλε Κάρτα',
+    rampa => 'καταλαμβάνει ράμπα ΑμεΑ',
+    fortistis => 'καταλαμβάνει θέση φόρτισης ηλεκτρικών οχημάτων χωρίς να φορτίζει',
+);
+my %SMS_OTHER = (
+    empodia => 'Παράνομα εμπόδια ή κώνοι από κατάστημα',
+    p72 => 'Αυθαίρετη διαγράμμιση και πινακίδα P-72',
+);
+
+# OSM names a region "Περιφέρεια <genitive>"; addresses use the nominative.
+my %REGION = (
+    'Αττικής' => 'Αττική', 'Κεντρικής Μακεδονίας' => 'Κεντρική Μακεδονία',
+    'Ανατολικής Μακεδονίας και Θράκης' => 'Ανατολική Μακεδονία και Θράκη',
+    'Δυτικής Μακεδονίας' => 'Δυτική Μακεδονία', 'Ηπείρου' => 'Ήπειρος', 'Θεσσαλίας' => 'Θεσσαλία',
+    'Ιονίων Νήσων' => 'Ιόνια Νησιά', 'Δυτικής Ελλάδας' => 'Δυτική Ελλάδα', 'Δυτικής Ελλάδος' => 'Δυτική Ελλάδα',
+    'Στερεάς Ελλάδας' => 'Στερεά Ελλάδα', 'Στερεάς Ελλάδος' => 'Στερεά Ελλάδα', 'Πελοποννήσου' => 'Πελοπόννησος',
+    'Βορείου Αιγαίου' => 'Βόρειο Αιγαίο', 'Νοτίου Αιγαίου' => 'Νότιο Αιγαίο', 'Κρήτης' => 'Κρήτη',
+);
+
+# The address of the report as written in Greece, e.g. "Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική".
+sub greece_address {
     my ($self, $cobrand) = @_;
-    my $contact = $self->contact;
-    return unless $contact && ($contact->get_extra_metadata('email_template') || '') eq 'amea';
-
-    my %answer = map { $_->{name} => $_->{value} } @{ $self->get_extra_fields };
-    my ($question) = grep { $_->{code} eq 'paravasi' } @{ $contact->get_extra_fields };
-    my ($choice) = grep { $_->{key} eq ($answer{paravasi} // '') } @{ $question ? $question->{values} || [] : [] };
-    my $violation = $choice ? $choice->{name} : 'Παράνομη στάθμευση σε θέση ΑμεΑ ή φόρτισης ηλεκτρικών οχημάτων';
-
-    my $address = $cobrand ? $cobrand->find_closest($self) : FixMyStreet::Geocode::Address->new($self->geocode);
-    my $parts = $address->parts;
-    my $osm = $address->{address} || {};
+    my $address = $cobrand ? $cobrand->find_closest($self) : $self->geocode && FixMyStreet::Geocode::Address->new($self->geocode);
+    my $parts = $address ? $address->parts : {};
+    my $osm = ($address && $address->{address}) || {};
     my $place = $osm->{suburb} || $osm->{neighbourhood} || $osm->{city} || $osm->{town} || $osm->{village};
     unless ($place) {
         my $dimos = $self->greece_dimos;
         ($place = $dimos->name) =~ s/^Δήμος // if $dimos;
     }
-    my $where = join ', ', grep { $_ } join(' ', grep { $_ } $parts->{street}, $parts->{number}), $place;
-    my $coords = sprintf '%.5f, %.5f', $self->latitude, $self->longitude;
+    (my $postcode = $osm->{postcode} || $parts->{postcode} || '') =~ s/^(\d{3})\s*(\d{2})$/$1 $2/;
+    (my $region = $osm->{state} || '') =~ s/^Περιφέρεια\s+//;
+    $region = $REGION{$region} || $region;
+    my $street = join ' ', grep { $_ } $parts->{street}, $parts->{number};
+    return join ', ', grep { $_ } $street, join(' ', grep { $_ } $postcode, $place), $region;
+}
 
-    my @lines = ("Καταγγελία: $violation.");
-    push @lines, 'Θέση: ' . ($where ? "$where ($coords)" : $coords) . '.';
-    (my $vehicle = $answer{oxima} // '') =~ s/^\s+|\s+$//g;
-    push @lines, "Όχημα: $vehicle." if $vehicle;
-    (my $site = FixMyStreet->config('BASE_URL')) =~ s{^https?://}{};
-    push @lines, 'Αρ. αναφοράς ' . $self->greece_ref . " ($site).";
-    return { number => FixMyStreet::Cobrand::Greece->greece_sms_number, body => join("\n", @lines) };
+# Greek plates use only the letters that look Latin (ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ), so a plate typed or read
+# in Latin letters is written in Greek, as "ΙΚΧ-1234". Anything else is kept, in capitals.
+sub greece_plate_normalise {
+    my $text = uc(shift // '');
+    $text =~ s/^\s+|\s+$//g;
+    (my $greek = $text) =~ tr/ABEZHIKMNOPTYX/ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ/;
+    $greek =~ s/[\s.\-]+//g;
+    return "$1-$2" if $greek =~ /^([ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ]{2,3})(\d{3,4})$/;
+    return $text;
+}
+
+# The plate of a police complaint (question "pinakida"), normalised.
+sub greece_plate {
+    my $self = shift;
+    my $plate = greece_plate_normalise($self->get_extra_field_value('pinakida'));
+    return length $plate ? $plate : undef;
+}
+
+# The addresses the report's category goes to, in the order of its bodies.
+sub greece_recipients {
+    my $self = shift;
+    my @ids = grep { $_ } split /,/, ($self->bodies_str || '');
+    return () unless @ids;
+    my %order = map { $ids[$_] => $_ } 0 .. $#ids;
+    my @contacts = sort { $order{$a->body_id} <=> $order{$b->body_id} } FixMyStreet::DB->resultset('Contact')->search(
+        { body_id => \@ids, category => $self->category, state => 'confirmed' })->all;
+    return map { split /\s*,\s*/, $_->email } @contacts;
+}
+
+# For a police complaint, the SMS the reporter can send from their phone: { number, body }, e.g.
+#   Όχημα με πινακίδα ΙΚΧ-1234 καταλαμβάνει ράμπα ΑμεΑ στη διεύθυνση Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική.
+#   Αρ. αναφοράς 24102026-1, στάλθηκε στα x@astynomia.gr και y@astynomia.gr.
+# Nothing for other categories.
+sub greece_sms {
+    my ($self, $cobrand) = @_;
+    my $contact = $self->contact;
+    return unless $contact && ($contact->get_extra_metadata('email_template') || '') eq 'amea';
+
+    my $paravasi = $self->get_extra_field_value('paravasi') // '';
+    my $address = $self->greece_address($cobrand);
+    my $where = $address ? "στη διεύθυνση $address"
+        : sprintf('στο σημείο %.5f, %.5f', $self->latitude, $self->longitude);
+    my $what;
+    if (my $does = $SMS_VEHICLE{$paravasi}) {
+        my $plate = $self->greece_plate;
+        $what = 'Όχημα' . ($plate ? " με πινακίδα $plate" : '') . " $does $where.";
+    } else {
+        $what = ($SMS_OTHER{$paravasi} || 'Παράνομη στάθμευση σε θέση ΑμεΑ ή φόρτισης ηλεκτρικών οχημάτων') . " $where.";
+    }
+
+    my @to = $self->greece_recipients;
+    my $sent = 'Αρ. αναφοράς ' . $self->greece_ref;
+    $sent .= ', στάλθηκε ' . (@to > 1 ? 'στα ' . join(' και ', @to) : "στο $to[0]") if @to;
+    return { number => FixMyStreet::Cobrand::Greece->greece_sms_number, body => "$what\n$sent." };
 }
 
 # Public reference DDMMYYYY-N: the local (TIME_ZONE) date the report was created and its

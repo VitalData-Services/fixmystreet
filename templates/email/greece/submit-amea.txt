@@ -14,6 +14,9 @@ Subject: [% subject %] (αρ. αναφοράς [% report.greece_ref %])
 χάρτης: [% osm_url %] ).
 
 • Περιγραφή της παράβασης: [% paravasi_text %]. Σχόλια: «[% report.title %][% IF report.detail %]: [% report.detail %][% END %]»
+[% IF pinakida %]
+• Αριθμός κυκλοφορίας: [% pinakida %]
+[% END %]
 [% IF oxima %]
 • Στοιχεία οχήματος: [% oxima %]
 [% END %]
