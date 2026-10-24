@@ -175,7 +175,8 @@ GEOCODING_DISAMBIGUATION:
 # The type of map you want to use. If left blank, the default is OpenStreetMap.
 # Other options are currently pretty UK specific, including "FMS" for UK
 # FixMyStreet.
-MAP_TYPE: 'OSM'
+# Greece: the site's own tiles (FixMyStreet::Map::Greece, tiles compose service).
+MAP_TYPE: 'Greece'
 
 # FixMyStreet uses a templating cobrand system to provide different looks for
 # different installations. In the common case, if your templates are in the

@@ -9,7 +9,7 @@
 
     var REPORT_ZOOM = 15;   // pin precise enough to start a report
     var DIMOS_ZOOM = 11;    // municipality lookup only once the map is zoomed past regional level
-    var STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+    var STYLE_URL = '/tiles/styles/positron/style.json';   // our own tiles, as on the report maps
     var dataBase = box.getAttribute('data-dimoi');
 
     var orLine = document.getElementById('gr-minimap-or');
@@ -30,7 +30,7 @@
         }
     }
 
-    // A flat, minimal basemap: no building footprints and no 3D extrusions.
+    // A flat, minimal basemap: the style has no buildings already; this keeps it so if that changes.
     fetch(STYLE_URL).then(function (r) { return r.json(); }).then(function (style) {
         style.layers = style.layers.filter(function (l) {
             return l['source-layer'] !== 'building' && l.type !== 'fill-extrusion';

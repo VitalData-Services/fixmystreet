@@ -1,0 +1,27 @@
+{
+  "options": {
+    "paths": {
+      "root": "/data",
+      "fonts": "fonts",
+      "sprites": "sprites",
+      "styles": "styles",
+      "mbtiles": "data"
+    },
+    "serveStaticMaps": false,
+    "maxScaleFactor": 2,
+    "maxSize": 512
+  },
+  "styles": {
+    "positron": {
+      "style": "positron.json",
+      "tilejson": {
+        "bounds": [19.3, 34.8, 29.7, 41.8]
+      }
+    }
+  },
+  "data": {
+    "greece": {
+      "mbtiles": "greece.mbtiles"
+    }
+  }
+}

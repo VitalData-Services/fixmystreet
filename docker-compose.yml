@@ -27,6 +27,7 @@ services:
       - ./conf/general.yml-docker:/var/www/fixmystreet/fixmystreet/conf/general.yml
       - ./locale/el_GR.UTF-8/LC_MESSAGES:/var/www/fixmystreet/fixmystreet/locale/el_GR.UTF-8/LC_MESSAGES:ro
       - ./perllib/FixMyStreet/Cobrand/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Cobrand/Greece.pm:ro
+      - ./perllib/FixMyStreet/Map/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Map/Greece.pm:ro
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
       - ./web/cobrands/greece:/var/www/fixmystreet/fixmystreet/web/cobrands/greece:ro
@@ -80,6 +81,21 @@ services:
       default:
         aliases:
           - memcached.svc
+  # Self-hosted map (docker/greece/tiles, data built by bin/greece/build-tiles.sh), proxied at /tiles/.
+  tiles:
+    image: maptiler/tileserver-gl:v5.6.0
+    restart: always
+    command: ["--config", "/data/config.json", "--public_url", "${TILES_PUBLIC_URL:-https://fixmystreets.gr/tiles/}"]
+    volumes:
+      - ./docker/greece/tiles/config.json:/data/config.json:ro
+      - ./docker/greece/tiles/styles:/data/styles:ro
+      - ${TILES_DIR:-/opt/tiles}/data:/data/data:ro
+      - ${TILES_DIR:-/opt/tiles}/fonts:/data/fonts:ro
+      - ${TILES_DIR:-/opt/tiles}/sprites:/data/sprites:ro
+    networks:
+      default:
+        aliases:
+          - tiles.svc
 
 volumes:
   fixmystreet-pgdata:
