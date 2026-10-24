@@ -50,7 +50,7 @@ services:
       FMS_DB_NAME: 'fixmystreet'
       FMS_DB_USER: 'fms'
       FMS_ROOT: '/var/www/fixmystreet/fixmystreet'
-      SUPERUSER_EMAIL: '<contact address>'
+      SUPERUSER_EMAIL: '<admin address>'
       SUPERUSER_PASSWORD: "${FMS_SUPERUSER_PASSWORD:?set FMS_SUPERUSER_PASSWORD in .env}"
     networks:
       default:
