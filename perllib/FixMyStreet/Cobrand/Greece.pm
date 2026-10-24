@@ -87,6 +87,7 @@ sub disable_login_for_email {
 
 sub report_new_munge_before_insert {
     my ($self, $report) = @_;
+    $self->greece_bad_words($report);
     my $c = $self->{c} or return;
     my $before = $c->stash->{greece_account_before} or return;
     my $user = $report->user;
@@ -100,6 +101,7 @@ sub report_new_munge_before_insert {
 sub report_new_munge_after_insert {
     my ($self, $report) = @_;
     my $c = $self->{c} or return;
+    $self->greece_moderation_email($report);
     return if $c->user_exists || $c->stash->{greece_account_link_sent};
     my $user = $report->user;
     return unless $user && $user->email;
@@ -115,9 +117,85 @@ sub report_new_munge_after_insert {
         report => $report,
         account_exists => $exists,
         token_url => $c->uri_for_action('/auth/token', [ $token->token ]),
-        report_url => $report->non_public ? '' : $self->base_url_for_report($report) . $report->url,
+        report_url => $report->non_public || $report->state eq 'hidden' ? '' : $self->base_url_for_report($report) . $report->url,
     });
     $c->stash->{greece_account_link_sent} = 1;
+}
+
+# Bad words in the report form: each one becomes "***", and a report with GREECE_MODERATE or more
+# is held for a moderator: hidden and flagged, so it is neither shown nor sent until a moderator
+# opens it in the admin (/admin/flagged). Whole words, any case; "παλιο-", "βρωμο-", "ψωρο-" in
+# front count too. Accents are written where the word without them is a harmless one (μαλάκα, the
+# insult; μαλακά, softly), so those match only as written with the accent.
+use constant GREECE_MODERATE => 3;
+my @BAD_WORDS = (
+    # Greek
+    'μαλ[άα]κας', 'μαλάκα', 'μαλ[άα]κες', 'μαλάκων', 'μαλακ[ίι](?:α|ας|ες)', 'μαλακι[ώω]ν', 'μαλακισμ[έε]ν\p{L}*',
+    'γαμ[ώω]', 'γαμ[ώω]το', 'γαμ[ηή]σ(?:ου|τε|ε|ω)', 'γάμησ(?:[εέ]|αν|ες)', 'γαμ[ηή]σι\p{L}*', 'γαμι[έε]σ(?:αι|αστε|τε)', 'γαμι[έε]ται',
+    'γαμι[όο]υνται', 'γαμημ[έε]ν\p{L}*', 'γαμι[όο]λ\p{L}*',
+    'π[οό][υύ]στ\p{L}*', 'καρ(?:γ)?ι[όο]λ\p{L}*', 'πουτ[άα]ν\p{L}*', 'τσο[υύ]λ(?:α|ας|ες)',
+    'αρχ[ιί]δ[ιί](?:α|ά|ων|ών)?', 'αρχιδ[άα]τ\p{L}*', 'μουν[ίι]', 'μουνι[άα]', 'μουνι[ώω]ν', 'μουν[άα]ρ\p{L}*', 'μουν[όο]π[αά]ν\p{L}*',
+    'ψωλ(?:ή|η|ές|ες|ής|ης)', 'κα[υύ]λ(?:α|ας|ί|ι|ιά|ια|ωμ[έε]ν\p{L}*)', 'βυζ[ιί](?:α|ά)?',
+    'σκατ(?:[άα]|[όο]|[ώω]ν|[έε]ν\p{L}*|ο\p{L}{3,})', 'χ[έε]σ(?:ε|τε|ου)', 'χ[έε]στηκ\p{L}*', 'χεσμ[έε]ν\p{L}*',
+    'κ[ώω]λ(?:ος|ο|ου|οι|ους)', 'κωλ[οό]\p{L}{3,}', 'κερατ[άα](?:ς|δες|δων)',
+    'βλ[άα]κ(?:ας|α|ες)', 'ηλ[ίι]θι\p{L}*',
+    'γ[ύυ]φτ(?:ος|οι|ου|ους|ισσα|ισσες|ιά|ια|ιές|ιες|ικ\p{L}*|αρι\p{L}*)',
+    # Greeklish
+    'malak(?:as|a|es|ia|ies|ismen\p{L}*)', 'gam(?:w|o|wto|oto|isou|hsou|iesai|imen\p{L}*|hmen\p{L}*|iol\p{L}*)',
+    'poust\p{L}*', 'kar(?:g)?iol\p{L}*', 'poutan\p{L}*', 'arxid\p{L}*', 'mouni(?:a)?', 'skata', 'xese', 'tsoula',
+    'psol(?:i|h)',
+    # English
+    'fuck\p{L}*', 'motherfuck\p{L}*', 'shit(?:s|ty|ting|head\p{L}*)?', 'bitch\p{L}*', 'asshole\p{L}*', 'cunt\p{L}*',
+    'dickhead\p{L}*', 'bastard\p{L}*', 'wank\p{L}*',
+);
+my $BAD_WORDS = do {
+    my $words = join '|', @BAD_WORDS;
+    qr/(?<![\p{L}\p{N}])(?:παλι[οό]|βρ[ωώ]μ[οό]|ψωρ[οό])?(?:$words)(?![\p{L}\p{N}])/i;
+};
+
+# The text with every bad word as "***", and how many there were.
+sub greece_mask_bad_words {
+    my ($text) = @_;
+    return ($text, 0) unless defined $text && $text =~ /\S/;
+    my $count = $text =~ s/$BAD_WORDS/***/g;
+    return ($text, $count || 0);
+}
+
+sub greece_bad_words {
+    my ($self, $report) = @_;
+    my $count = 0;
+    for my $field (qw(detail name)) {
+        my ($masked, $n) = greece_mask_bad_words($report->$field);
+        next unless $n;
+        $report->$field($masked);
+        $count += $n;
+    }
+    # The title is the category, or (for «Άλλα») the start of the description: masked, not counted.
+    my ($title) = greece_mask_bad_words($report->title);
+    $report->title($title) if defined $title;
+    my $user = $report->user;
+    if ($user && !$user->in_storage) {
+        my ($name) = greece_mask_bad_words($user->name);
+        $user->name($name) if defined $name;
+    }
+    return unless $count;
+    $report->set_extra_metadata(greece_bad_words => $count);
+    if ($count >= GREECE_MODERATE) {
+        $report->state('hidden');
+        $report->flagged(1);
+    }
+}
+
+# A report held for a moderator: tell the site's contact address, with the admin link.
+sub greece_moderation_email {
+    my ($self, $report) = @_;
+    my $c = $self->{c} or return;
+    return unless $report->state eq 'hidden' && $report->flagged && $report->get_extra_metadata('greece_bad_words');
+    $c->send_email('moderation.txt', {
+        to => [ $self->contact_email ],
+        report => $report,
+        admin_url => $c->cobrand->base_url . '/admin/report_edit/' . $report->id,
+    });
 }
 
 # Installable web app (PWA). Name and colours are the cobrand's manifest theme (admin, or
