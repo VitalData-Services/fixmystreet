@@ -103,7 +103,11 @@ up outside this repository:
 
 - It accepts mail only from the host and the Docker networks (`mynetworks = 127.0.0.0/8
   172.16.0.0/12`) and relays all of it to an SMTP relay whose address has a matching PTR and is in
-  the domain's SPF.
+  the domain's SPF, over the internet on port 587 (the server's public address is dynamic): the
+  relay lets through only clients presenting a known TLS client key (`relayhost`,
+  `smtp_tls_cert_file`/`smtp_tls_key_file` in `/etc/postfix/tls/`), and this Postfix checks the
+  relay's own key (`smtp_tls_security_level = fingerprint`, `smtp_tls_fingerprint_cert_match`
+  with the SHA-256 of its public key). A new key on either side means updating the other.
 - OpenDKIM signs mail from `@fixmystreets.gr` with selector `fms2026`; the public key is the TXT
   record `fms2026._domainkey.fixmystreets.gr`. Mail from the Docker networks is listed as internal
   (`InternalHosts`), otherwise OpenDKIM would only verify it. Do not publish the `h=rsa-sha256` tag
