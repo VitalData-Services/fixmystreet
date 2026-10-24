@@ -33,6 +33,17 @@ sub munge_sendreport_params {
     my $template = ($contact && $contact->get_extra_metadata('email_template')) || '';
     $h->{email_template} = $template if $template =~ /^[a-z]+$/;
 
+    # The reporter's contact details for the letters; a report made without an email has none, and
+    # replies to it go to the site's contact address rather than the shared anonymous account.
+    if ($self->greece_anonymous_report($row)) {
+        $h->{reporter_email} = '';
+        $h->{reporter_phone} = $row->get_extra_metadata('greece_phone') // '';
+        $params->{'Reply-To'} = [ [ $self->contact_email, 'FixMyStreets' ] ] if $params->{'Reply-To'};
+    } else {
+        $h->{reporter_email} = $row->user->email // '';
+        $h->{reporter_phone} = $row->user->phone // '';
+    }
+
     # The location as a Google Maps link, which the police letters give instead of coordinates.
     $h->{gmaps_url} = sprintf 'https://www.google.com/maps/search/?api=1&query=%.6f,%.6f', $row->latitude, $row->longitude;
 
@@ -49,18 +60,42 @@ sub greece_sms_number { '100' }
 # away. Afterwards the reporter's address gets a one-off link to create an account (below).
 sub never_confirm_reports { 1 }
 
+# A report needs no email when the reporter's name is not shown publicly (always, in private
+# categories such as police complaints). FixMyStreet then files it under one shared account
+# (anonymous_account), sends no alerts or questionnaires; the name and phone typed, if any, stay on
+# the report (report_new_munge_before_insert) for the body or police, and replies to the email go
+# to the site's contact address (munge_sendreport_params). The email is needed to show the name.
+sub allow_anonymous_reports { 1 }
+
+sub anonymous_account {
+    my $domain = FixMyStreet->config('EMAIL_DOMAIN') or return;
+    return { email => "anonymous\@$domain", name => 'Ανώνυμος πολίτης' };
+}
+
+# Whether the report was made without an email (filed under anonymous_account).
+sub greece_anonymous_report {
+    my ($self, $report) = @_;
+    my $anon = $self->anonymous_account or return 0;
+    return lc($report->user && $report->user->email // '') eq lc $anon->{email} ? 1 : 0;
+}
+
 # The report form has no title field, only the description (templates/web/greece/report/new/
 # form_report.html). The title is the category, which is what lists, the report page and the
 # emails to the body show above the description; for «Άλλα» it is the start of the description.
 sub report_check_for_errors {
     my ($self, $c) = @_;
     my $report = $c->stash->{report};
+    my %more;
+    if (!$c->user_exists && $report && !$report->non_public && $c->get_param('may_show_name')
+        && ($c->get_param('username_register') // '') !~ /\S/) {
+        $more{username_register} = 'Για να φαίνεται δημόσια το όνομά σου, γράψε και το email σου.';
+    }
     if ($report && ($report->title // '') !~ /\S/) {
         my $category = $report->category // '';
         my $title = $category eq 'Άλλα' || $category eq '' ? greece_excerpt($report->detail, 60) : $category;
         $report->title($title || $category || 'Αναφορά');
     }
-    return $self->SUPER::report_check_for_errors($c);
+    return ($self->SUPER::report_check_for_errors($c), %more);
 }
 
 # The text on one line, cut at a word to at most $max characters, with "…" if cut.
@@ -91,8 +126,20 @@ sub disable_login_for_email {
 
 sub report_new_munge_before_insert {
     my ($self, $report) = @_;
+    my $c = $self->{c};
+    if ($c && !$c->user_exists && $c->stash->{contributing_as_anonymous_user}) {
+        # FixMyStreet put the shared account's name on the report; keep what was typed instead.
+        my $name = $c->get_param('name') // '';
+        $name =~ s/^\s+|\s+$//g;
+        $report->name($name ne '' ? $name : $self->anonymous_account->{name});
+        $report->anonymous(1);
+        $report->send_questionnaire(0);
+        my $phone = $c->get_param('phone') // '';
+        $phone =~ s/^\s+|\s+$//g;
+        $report->set_extra_metadata(greece_phone => $phone) if $phone ne '';
+    }
     $self->greece_bad_words($report);
-    my $c = $self->{c} or return;
+    return unless $c;
     my $before = $c->stash->{greece_account_before} or return;
     my $user = $report->user;
     return unless $user && $user->in_storage && $user->id == $before->{id};
@@ -106,7 +153,7 @@ sub report_new_munge_after_insert {
     my ($self, $report) = @_;
     my $c = $self->{c} or return;
     $self->greece_moderation_email($report);
-    return if $c->user_exists || $c->stash->{greece_account_link_sent};
+    return if $c->user_exists || $c->stash->{greece_account_link_sent} || $self->greece_anonymous_report($report);
     my $user = $report->user;
     return unless $user && $user->email;
     my $exists = $user->password ? 1 : 0;

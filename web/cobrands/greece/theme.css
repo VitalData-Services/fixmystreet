@@ -640,3 +640,7 @@ h2.static-with-rule { border-top: 0; border-radius: var(--gr-radius-s); backgrou
     .nav-menu--main a.report-a-problem-btn { display: none; }
 }
 
+/* Reports without an email are made from the same form (email left empty), so FixMyStreet's separate
+   «Ανώνυμη αναφορά» button is not used. */
+.js-show-if-anonymous { display: none !important; }
+
