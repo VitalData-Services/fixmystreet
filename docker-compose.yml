@@ -27,7 +27,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./conf/general.yml-docker:/var/www/fixmystreet/fixmystreet/conf/general.yml
+      # The real configuration (addresses, database password) is kept out of git: copy
+      # conf/general.yml-docker to conf/general.yml-local and fill it in.
+      - ./conf/general.yml-local:/var/www/fixmystreet/fixmystreet/conf/general.yml
       - ./locale/el_GR.UTF-8/LC_MESSAGES:/var/www/fixmystreet/fixmystreet/locale/el_GR.UTF-8/LC_MESSAGES:ro
       - ./perllib/FixMyStreet/Cobrand/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Cobrand/Greece.pm:ro
       - ./perllib/FixMyStreet/Map/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Map/Greece.pm:ro
@@ -44,13 +46,13 @@ services:
         tmpfs:
           size: "104857600"
     environment:
-      POSTGRES_PASSWORD: 'password'
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
       FMS_DB_HOST: 'postgres.svc'
-      FMS_DB_PASS: 'fms'
+      FMS_DB_PASS: "${FMS_DB_PASS:?set FMS_DB_PASS in .env}"
       FMS_DB_NAME: 'fixmystreet'
       FMS_DB_USER: 'fms'
       FMS_ROOT: '/var/www/fixmystreet/fixmystreet'
-      SUPERUSER_EMAIL: '<admin address>'
+      SUPERUSER_EMAIL: "${FMS_SUPERUSER_EMAIL:?set FMS_SUPERUSER_EMAIL in .env}"
       SUPERUSER_PASSWORD: "${FMS_SUPERUSER_PASSWORD:?set FMS_SUPERUSER_PASSWORD in .env}"
     networks:
       default:
@@ -66,7 +68,7 @@ services:
     volumes:
       - fixmystreet-pgdata:/var/lib/postgresql/data/pgdata
     environment:
-      POSTGRES_PASSWORD: 'password'
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
       PGDATA: '/var/lib/postgresql/data/pgdata'
     networks:
       default:

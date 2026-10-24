@@ -72,5 +72,6 @@ gh_fixmycommunity
 [Kk]iit[Cc]*
 [Tt]ransport[Ff]ocus*
 
-# Local secrets for docker compose
+# Local secrets for docker compose, and the real configuration
 /.env
+/conf/general.yml-local

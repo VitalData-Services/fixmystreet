@@ -18,7 +18,7 @@ FMS_DB_HOST: 'postgres.svc'
 FMS_DB_PORT: '5432'
 FMS_DB_NAME: 'fixmystreet'
 FMS_DB_USER: 'fms'
-FMS_DB_PASS: 'fms'
+FMS_DB_PASS: '<FMS_DB_PASS from .env>'
 
 # The base URL of the install.
 BASE_URL: 'https://fixmystreets.gr'
@@ -228,7 +228,7 @@ TWITTER_SECRET: ''
 # If you wish to send email through a SMTP server elsewhere, change these
 # variables. SMTP_TYPE should be one of '', 'ssl' or 'tls'. SMTP_PORT will
 # default to 587 (tls), 465 (ssl), or 25.
-# Greece: the host Postfix (DKIM for fixmystreets.gr, relay).
+# Greece: the host Postfix, which signs mail with DKIM and relays it.
 SMTP_SMARTHOST: 'host.docker.internal'
 SMTP_TYPE: ''
 SMTP_PORT: ''

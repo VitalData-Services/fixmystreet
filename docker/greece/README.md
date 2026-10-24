@@ -13,9 +13,16 @@ gitignored, so compile it after every change to the `.po` and restart the app co
       msgfmt -c -o /l/FixMyStreet.mo /l/FixMyStreet.po
     docker compose restart fixmystreet
 
-## Secrets
+## Secrets and local configuration
 
-`.env` (gitignored) holds `FMS_SUPERUSER_PASSWORD=...`. `docker compose` refuses to start without it.
+Nothing site-specific that is private is kept in git. `docker compose` refuses to start without
+these two gitignored files:
+
+- `.env`: `FMS_SUPERUSER_EMAIL`, `FMS_SUPERUSER_PASSWORD`, `POSTGRES_PASSWORD` and `FMS_DB_PASS`
+  (random values; the database roles must have the same passwords).
+- `conf/general.yml-local`: the app configuration mounted as `general.yml`. Copy
+  `conf/general.yml-docker`, which has placeholders in angle brackets, and fill in the addresses
+  and `FMS_DB_PASS`.
 
 ## Greece cobrand
 
@@ -98,9 +105,6 @@ up outside this repository:
   record `fms2026._domainkey.fixmystreets.gr`. Mail from the Docker networks is listed as internal
   (`InternalHosts`), otherwise OpenDKIM would only verify it. Do not publish the `h=rsa-sha256` tag
   that `opendkim-genkey -h rsa-sha256` writes into the record: `h=` takes hash names (`sha256`).
-- Until `EMAIL_DOMAIN` and `DO_NOT_REPLY_EMAIL` are at fixmystreets.gr, the site's mail is not
-  signed. Mail sent as `DO_NOT_REPLY_EMAIL` still passes SPF; report emails, sent as a VERP
-  address at `EMAIL_DOMAIN`, pass neither SPF nor DKIM.
 - Incoming mail for fixmystreets.gr goes to the domain's mail host, not to this server, so bounces
   to the VERP addresses are not processed.
 
