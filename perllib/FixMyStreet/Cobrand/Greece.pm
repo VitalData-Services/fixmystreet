@@ -101,7 +101,7 @@ sub manifest {
     return {
         id => '/?pwa',
         display => 'standalone',
-        description => 'Ανάφερε προβλήματα και εμπόδια στην περιοχή σου: λακκούβες, σκουπίδια, φώτα, πεζοδρόμια, στάθμευση σε θέσεις ΑμεΑ.',
+        description => 'Ανάφερε προβλήματα και εμπόδια στην περιοχή σου: λακκούβες, σκουπίδια, φώτα, πεζοδρόμια, παράνομη στάθμευση.',
         categories => [ 'government', 'utilities' ],
         icons => [ (map { { %$_, purpose => 'any' } } @icons), (map { { %$_, purpose => 'maskable' } } @icons) ],
     };
@@ -126,9 +126,9 @@ sub greece_dimos {
 # The SMS sentence for each answer to "Τι συμβαίνει;": what a vehicle does ("Όχημα ..."), or
 # what is there.
 my %SMS_VEHICLE = (
-    xoris_karta => 'καταλαμβάνει θέση στάθμευσης ΑμεΑ χωρίς Μπλε Κάρτα',
-    rampa => 'καταλαμβάνει ράμπα ΑμεΑ',
     fortistis => 'καταλαμβάνει θέση φόρτισης ηλεκτρικών οχημάτων χωρίς να φορτίζει',
+    eisodos => 'κλείνει είσοδο οχημάτων (γκαράζ)',
+    diplo => 'είναι σταθμευμένο διπλά και κλείνει τον δρόμο',
 );
 my %SMS_OTHER = (
     empodia => 'Παράνομα εμπόδια ή κώνοι από κατάστημα',
@@ -193,7 +193,7 @@ sub greece_recipients {
 }
 
 # For a police complaint, the SMS the reporter can send from their phone: { number, body }, e.g.
-#   Όχημα με πινακίδα ΙΚΧ-1234 καταλαμβάνει ράμπα ΑμεΑ στη διεύθυνση Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική.
+#   Όχημα με πινακίδα ΙΚΧ-1234 κλείνει είσοδο οχημάτων (γκαράζ) στη διεύθυνση Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική.
 #   Αρ. αναφοράς 24102026-1, στάλθηκε στα x@astynomia.gr και y@astynomia.gr.
 # Nothing for other categories.
 sub greece_sms {
@@ -210,7 +210,7 @@ sub greece_sms {
         my $plate = $self->greece_plate;
         $what = 'Όχημα' . ($plate ? " με πινακίδα $plate" : '') . " $does $where.";
     } else {
-        $what = ($SMS_OTHER{$paravasi} || 'Παράνομη στάθμευση σε θέση ΑμεΑ ή φόρτισης ηλεκτρικών οχημάτων') . " $where.";
+        $what = ($SMS_OTHER{$paravasi} || 'Παράνομη στάθμευση') . " $where.";
     }
 
     my @to = $self->greece_recipients;

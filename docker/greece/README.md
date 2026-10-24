@@ -89,8 +89,9 @@ DMARC at the recipient, because the site does not send for the reporter's domain
 
 A category can use its own email template: set `email_template` in the contact's extra metadata
 (e.g. `amea`), and `submit.txt`/`submit.html` hand over to `submit-amea.txt`/`submit-amea.html`.
-`amea` is the complaint letter to the police about disabled (ΑμεΑ) and EV-charging bays, built from
-the category's questions (`_amea_vars.txt`); it asks for corrections as `MAIL ΥΠΗΡΕΣΙΑΣ:<address>`.
+`amea` is the complaint letter to the police about parking on EV-charging bays or that blocks the
+way, built from the category's questions (`_amea_vars.txt`); it asks for corrections as
+`MAIL ΥΠΗΡΕΣΙΑΣ:<address>`.
 
 ## Outgoing mail
 
@@ -132,8 +133,13 @@ overwrites admin edits to those six categories, so an address a municipality sen
 municipalities (Corfu, Kefalonia), a report goes to all of them, with FixMyStreet's note that it was
 sent to several bodies.
 
-Disabled (ΑμεΑ) and EV-charging bays go to the police rather than the municipality, in every
-municipality. A body per police unit covers the areas of the municipalities it serves and owns that
+Parking complaints go to the police rather than the municipality, in every municipality: EV-charging
+bays and parking that blocks the way (garage entrances, double parking), shops' cones and obstacles,
+P-72 signs. Parking on disabled (ΑμεΑ) bays and ramps, pavements and crossings is recorded on
+xorisempodia.gr instead: its category stops the form (`disable_form`) with a link to
+https://xorisempodia.gr/reports/new, so no report is made here.
+
+A body per police unit covers the areas of the municipalities it serves and owns the complaint
 category, so a report goes in one email to two units:
 - the municipality's Αστυνομικό Τμήμα when the match is certain, otherwise its Διεύθυνση
   Αστυνομίας, which forwards citizens' requests to the competent unit (also where MapIt has one
