@@ -44,7 +44,7 @@ CONTACT_NAME: 'FixMyStreets'
 # Address used for emails you don't expect a reply to (e.g. confirmation
 # emails); can be same as CONTACT_EMAIL above, of course, if you don't have a
 # special address.
-DO_NOT_REPLY_EMAIL: '<contact address>'
+DO_NOT_REPLY_EMAIL: '<no-reply address>'
 
 # Whether this is a development site or not. It will mean e.g. templates/
 # CSS modified times aren't cached
