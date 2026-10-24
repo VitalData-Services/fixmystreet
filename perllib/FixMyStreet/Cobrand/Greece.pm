@@ -3,6 +3,7 @@ use base 'FixMyStreet::Cobrand::Default';
 
 use strict;
 use warnings;
+use utf8;
 
 # Reuse the Default cobrand's compiled CSS; this cobrand only adds templates and a little JS/CSS.
 sub asset_moniker { 'default' }
@@ -16,6 +17,27 @@ sub lookup_by_ref {
     return unless $ref =~ /^(\d\d)(\d\d)(\d{4})-(\d+)$/;
     my $id = FixMyStreet::DB::Result::Problem::greece_ref_to_id("$3-$2-$1", $4);
     return [ id => $id || 0 ];
+}
+
+# Values the report email templates use besides the stock ones.
+sub munge_sendreport_params {
+    my ($self, $row, $h, $params) = @_;
+
+    # The address the email went to, so the recipient can send us a better one.
+    $h->{sent_to} = join ', ', map { ref $_ ? $_->[0] : $_ } @{ $params->{To} || [] };
+
+    # A category can have its own email (contact extra metadata email_template, e.g. "amea"
+    # for the police complaint about disabled or EV-charging bays); submit.txt hands over to it.
+    my $contact = $row->contact;
+    my $template = ($contact && $contact->get_extra_metadata('email_template')) || '';
+    $h->{email_template} = $template if $template =~ /^[a-z]+$/;
+
+    # The municipality of the location, for emails to a body that is not the municipality.
+    my @areas = grep { $_ } split /,/, ($row->areas || '');
+    my $dimos = @areas && FixMyStreet::DB->resultset('Body')->search(
+        { 'body_areas.area_id' => \@areas, 'me.name' => { -like => 'Δήμος %' }, 'me.deleted' => 0 },
+        { join => 'body_areas', order_by => 'me.id' })->first;
+    $h->{dimos_name} = $dimos->name if $dimos;
 }
 
 package FixMyStreet::DB::Result::Problem;
@@ -50,6 +72,22 @@ FROM p
 SQL
         defined $day ? "$day-$n" : $self->id;
     };
+}
+
+# Every photo of the report at full size, for attaching to an email.
+sub greece_photos {
+    my $self = shift;
+    my $set = $self->get_photoset;
+    return [ grep { $_ } map { $set->get_image_data(num => $_, size => 'full') } 0 .. $set->num_images - 1 ];
+}
+
+# When the report was made, in local time, e.g. "24/10/2026 18:05".
+sub greece_local_time {
+    my $self = shift;
+    my $dt = ($self->confirmed || $self->created)->clone;
+    $dt->set_time_zone(FixMyStreet->local_time_zone) if $dt->time_zone->is_floating;
+    $dt->set_time_zone(FixMyStreet->time_zone || FixMyStreet->local_time_zone);
+    return $dt->strftime('%d/%m/%Y %H:%M');
 }
 
 # Inverse of greece_ref: the id of the $n-th report created on local date $date (YYYY-MM-DD).
