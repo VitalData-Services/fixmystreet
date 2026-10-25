@@ -3,6 +3,7 @@
   <url><loc>https://fixmystreets.gr/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://fixmystreets.gr/faq</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://fixmystreets.gr/reports</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://fixmystreets.gr/about/foreis</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://fixmystreets.gr/reports/%CE%94%CE%AE%CE%BC%CE%BF%CF%82+%CE%91%CE%B2%CE%B4%CE%AE%CF%81%CF%89%CE%BD</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://fixmystreets.gr/reports/%CE%94%CE%AE%CE%BC%CE%BF%CF%82+%CE%91%CE%B3%CE%B1%CE%B8%CE%BF%CE%BD%CE%B7%CF%83%CE%AF%CE%BF%CF%85</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://fixmystreets.gr/reports/%CE%94%CE%AE%CE%BC%CE%BF%CF%82+%CE%91%CE%B3%CE%B9%CE%AC%CF%82</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>

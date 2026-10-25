@@ -11,7 +11,7 @@ import urllib.parse
 from xml.sax.saxutils import escape
 
 BASE = 'https://fixmystreets.gr'
-PAGES = [('/', 'daily', '1.0'), ('/faq', 'monthly', '0.6'), ('/reports', 'daily', '0.8')]
+PAGES = [('/', 'daily', '1.0'), ('/faq', 'monthly', '0.6'), ('/reports', 'daily', '0.8'), ('/about/foreis', 'monthly', '0.4')]
 
 names = subprocess.run(
     ['docker', 'exec', '-i', 'fixmystreet-postgres-1', 'psql', '-U', 'postgres', '-d', 'fixmystreet', '-At', '-c',
