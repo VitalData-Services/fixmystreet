@@ -44,6 +44,7 @@ services:
       - ./perllib/FixMyStreet/App/Controller/GreecePhoto.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreecePhoto.pm:ro
       # Sign-in page with email and password together (POST /greece/auth).
       - ./perllib/FixMyStreet/App/Controller/GreeceAuth.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceAuth.pm:ro
+      - ./perllib/FixMyStreet/App/Controller/GreeceSocial.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceSocial.pm:ro
       - fixmystreet-originals:/var/lib/fms-originals
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
