@@ -13,10 +13,15 @@ website, email_*, phone_* columns (dimoi_base.csv or dimoi_contacts.csv).
 geometries.json: {osm_rel: GeoJSON geometry}, e.g. from Nominatim lookup with
 polygon_geojson=1&polygon_threshold=0.0005.
 overrides.csv: same columns, matched on osm_rel; non-empty values replace the base ones.
+Pass dimoi_police.csv as one of them for the municipality's police station (at_name, at_email,
+at_phone), which the minimap's card shows with the municipality's contacts, and
+dimoi_emails_official.csv for the municipality's official address where there is no other
+(email_recommended, the first of kede_phones).
 """
 import csv
 import json
 import os
+import re
 import sys
 
 from shapely.geometry import shape
@@ -65,6 +70,27 @@ def label_point(geom):
     return [round(p.x, 5), round(p.y, 5)]
 
 
+def first_phone(text):
+    """The first phone number in a list such as "210 5277000, 1595;210 3310861" (a short line like
+    1595 is skipped)."""
+    m = re.search(r"\+?\d[\d ]{6,}\d", text or "")
+    return m.group(0).strip() if m else ""
+
+
+def police_station(row):
+    """The police station from dimoi_police.csv's columns: {"n": name, "e": email, "t": phone}, the phone
+    without its label ("Αξιωματικός Υπηρεσίας: 22820 22300") and only the first number. Where the file
+    names no station (several in one municipality, as in Αθήνα, or none), its police directorate."""
+    name, email = (row.get("at_name") or "").strip(), (row.get("at_email") or "").strip()
+    m = re.search(r"\+?\d[\d ]{6,}\d", (row.get("at_phone") or "").split(":")[-1])
+    phone = m.group(0).strip() if m else ""
+    if not (email or phone):
+        name, email = (row.get("directorate") or "").strip(), (row.get("directorate_email") or "").strip()
+        if not email:
+            return None
+    return {"n": name or "Αστυνομικό Τμήμα", **({"e": email} if email else {}), **({"t": phone} if phone else {})}
+
+
 def load_rows(csv_path, override_paths):
     rows = {}
     with open(csv_path, newline="") as f:
@@ -91,6 +117,9 @@ def main(csv_path, geoms_path, out_dir, *override_paths):
         entry = {"r": int(rel), "n": row["name_el"], "b": bbox(geom), "p": label_point(geom)}
         if row.get("website"):
             entry["w"] = row["website"]
+        if not (row.get("email_general") or "").strip() and (row.get("email_recommended") or "").strip():
+            row["email_general"] = row["email_recommended"].strip()
+            row["phone_general"] = first_phone(row.get("kede_phones"))
         contacts = []
         for email_col, phone_col, label in CONTACT_FIELDS:
             email, phone = (row.get(email_col) or "").strip(), (row.get(phone_col) or "").strip()
@@ -98,6 +127,9 @@ def main(csv_path, geoms_path, out_dir, *override_paths):
                 contacts.append({"l": label, **({"e": email} if email else {}), **({"t": phone} if phone else {})})
         if contacts:
             entry["c"] = contacts
+        police = police_station(row)
+        if police:
+            entry["a"] = police
         index.append(entry)
         with open(os.path.join(out_dir, rel + ".json"), "w") as g:
             json.dump(rounded(geom), g, separators=(",", ":"))
