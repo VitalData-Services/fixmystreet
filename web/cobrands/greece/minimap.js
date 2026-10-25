@@ -168,7 +168,10 @@
             // One blue button at a time: «Χρήση της τοποθεσίας μου» until «Αναφορά εδώ» can be pressed.
             locateBtn.classList.toggle('btn--primary', !ready);
             if (ready) {
-                reportLink.href = reportBase + '?latitude=' + c.lat.toFixed(6) + '&longitude=' + c.lng.toFixed(6);
+                // The report's map opens at the same scale: MapLibre's zoom z is OpenLayers' z + 1 (512 px
+                // against 256 px tiles), and FixMyStreet's zoom counts from its lowest level, 13 (Map::Base).
+                var olZoom = Math.min(6, Math.max(0, Math.round(z + 1) - 13));
+                reportLink.href = reportBase + '?latitude=' + c.lat.toFixed(6) + '&longitude=' + c.lng.toFixed(6) + '&zoom=' + olZoom;
             }
             if (!index || z < DIMOS_ZOOM) {
                 show(null);
@@ -304,7 +307,7 @@
                 map.jumpTo({ center: here, zoom: 17 });
                 locateBtn.disabled = false;
                 locateBtn.textContent = t('Ξανά στη θέση μου', 'Back to my location');
-                status.textContent = t('Μετακίνησε τον χάρτη ώστε η κόκκινη καρφίτσα να δείχνει ακριβώς το πρόβλημα.', 'Move the map so that the red pin points exactly at the problem.');
+                status.textContent = t('Μετακίνησε τον χάρτη ώστε η καρφίτσα να δείχνει ακριβώς το πρόβλημα.', 'Move the map so that the pin points exactly at the problem.');
                 located(true);
             }, function (err) {
                 locateBtn.disabled = false;
