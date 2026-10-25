@@ -7,6 +7,7 @@ browser can find the municipality under the map centre without any third-party c
 
 Usage:
     build-dimoi-data.py <municipalities.csv> <geometries.json> <output-dir> [<overrides.csv> ...]
+        [--stations=<dimoi_police_stations.csv>]
 
 municipalities.csv: one row per municipality with at least name_el and osm_rel; optional
 website, email_*, phone_* columns (dimoi_base.csv or dimoi_contacts.csv).
@@ -17,6 +18,9 @@ Pass dimoi_police.csv as one of them for the municipality's police station (at_n
 at_phone), which the minimap's card shows with the municipality's contacts, and
 dimoi_emails_official.csv for the municipality's official address where there is no other
 (email_recommended, the first of kede_phones).
+--stations: the police stations of a municipality that has several (Αθήνα, Θεσσαλονίκη, …), one row
+each with its place (station, email, phone, lat, lon); the card shows the one nearest the map centre
+(a municipality's boundary counts as its stations' boundary), the directorate when the script cannot.
 """
 import csv
 import json
@@ -88,7 +92,10 @@ def police_station(row):
         name, email = (row.get("directorate") or "").strip(), (row.get("directorate_email") or "").strip()
         if not email:
             return None
-    return {"n": name or "Αστυνομικό Τμήμα", **({"e": email} if email else {}), **({"t": phone} if phone else {})}
+    police = {"n": name or "Αστυνομικό Τμήμα", **({"e": email} if email else {}), **({"t": phone} if phone else {})}
+    if (row.get("match_method") or "") == "nearest-station":
+        police["x"] = 1   # not in the municipality: the nearest one (Αγαθονήσι, Γαύδος)
+    return police
 
 
 def load_rows(csv_path, override_paths):
@@ -104,7 +111,26 @@ def load_rows(csv_path, override_paths):
     return rows.values()
 
 
+def load_stations(path):
+    stations = {}
+    if not path:
+        return stations
+    with open(path, newline="") as f:
+        for row in csv.DictReader(f):
+            m = re.search(r"\+?\d[\d ]{6,}\d", row.get("phone") or "")
+            st = {"n": row["station"].strip(), "p": [round(float(row["lon"]), 5), round(float(row["lat"]), 5)]}
+            if (row.get("email") or "").strip():
+                st["e"] = row["email"].strip()
+            if m:
+                st["t"] = m.group(0).strip()
+            stations.setdefault(row["osm_rel"], []).append(st)
+    return stations
+
+
 def main(csv_path, geoms_path, out_dir, *override_paths):
+    stations_path = next((a.split("=", 1)[1] for a in override_paths if a.startswith("--stations=")), None)
+    override_paths = [a for a in override_paths if not a.startswith("--stations=")]
+    stations = load_stations(stations_path)
     geoms = json.load(open(geoms_path))
     os.makedirs(out_dir, exist_ok=True)
     index = []
@@ -130,6 +156,8 @@ def main(csv_path, geoms_path, out_dir, *override_paths):
         police = police_station(row)
         if police:
             entry["a"] = police
+        if stations.get(rel):
+            entry["s"] = stations[rel]
         index.append(entry)
         with open(os.path.join(out_dir, rel + ".json"), "w") as g:
             json.dump(rounded(geom), g, separators=(",", ":"))

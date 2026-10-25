@@ -176,7 +176,10 @@
             }
             var seq = ++lookupSeq;
             findDimos(c.lng, c.lat).then(function (hit) {
-                if (seq === lookupSeq) { show(hit); }
+                if (seq !== lookupSeq) { return; }
+                show(hit);
+                // Within a municipality with several stations, the nearest one follows the map.
+                if (hit && hit.d.s) { showPolice(hit.d); }
             }, function () {});
         }
 
@@ -236,18 +239,40 @@
                 a.rel = 'noopener';
                 item(t('Ιστότοπος: ', 'Website: ')).appendChild(a);
             }
-            // The municipality's police station (or its police directorate), as the police complaints go there.
-            if (hit.d.a) {
-                var police = item(hit.d.a.n + ': ');
-                police.className = 'gr-dimos__police';
-                if (hit.d.a.e) { police.appendChild(link('mailto:' + hit.d.a.e, hit.d.a.e)); }
-                if (hit.d.a.e && hit.d.a.t) { police.appendChild(document.createTextNode(' · ')); }
-                if (hit.d.a.t) { police.appendChild(link('tel:' + hit.d.a.t.replace(/\s+/g, ''), hit.d.a.t)); }
-            }
+            // The municipality's police station, as the police complaints go there.
+            policeItem = item('');
+            policeItem.className = 'gr-dimos__police';
+            policeShown = null;
+            showPolice(hit.d);
             if (fixLink) {
                 fixLink.href = '/contact?subject=' + encodeURIComponent(t('Διόρθωση στοιχείων: ', 'Correction: ') + hit.d.n);
             }
             card.hidden = false;
+        }
+
+        // The station: the municipality's own; where it has several (d.s), the one nearest the map centre;
+        // where it has none, the nearest one elsewhere (a.x); failing those, the police directorate.
+        var policeItem = null, policeShown = null;
+        function showPolice(d) {
+            if (!policeItem) { return; }
+            var st = d.a, near = !!(d.a && d.a.x);
+            if (d.s && d.s.length) {
+                var c = map.getCenter(), k = Math.cos(c.lat * Math.PI / 180), best = Infinity;
+                d.s.forEach(function (s) {
+                    var dx = (s.p[0] - c.lng) * k, dy = s.p[1] - c.lat, dist = dx * dx + dy * dy;
+                    if (dist < best) { best = dist; st = s; }
+                });
+                near = true;
+            }
+            if (st === policeShown) { return; }
+            policeShown = st;
+            while (policeItem.firstChild) { policeItem.removeChild(policeItem.firstChild); }
+            policeItem.hidden = !st;
+            if (!st) { return; }
+            policeItem.appendChild(document.createTextNode(st.n + (near ? t(' (το πλησιέστερο)', ' (nearest)') : '') + ': '));
+            if (st.e) { policeItem.appendChild(link('mailto:' + st.e, st.e)); }
+            if (st.e && st.t) { policeItem.appendChild(document.createTextNode(' · ')); }
+            if (st.t) { policeItem.appendChild(link('tel:' + st.t.replace(/\s+/g, ''), st.t)); }
         }
 
         function item(text) {
