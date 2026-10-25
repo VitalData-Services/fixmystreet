@@ -24,7 +24,7 @@ CATEGORIES = [
     "Άλλο",
 ]
 
-OWN_FILE = {"Δήμος Χαϊδαρίου": "haidari.sql"}
+OWN_FILE = {"Δήμος Χαϊδαρίου": "haidari.sql", "Δήμος Παλαιού Φαλήρου": "palaiofaliro.sql", "Δήμος Πειραιώς": "piraeus.sql", "Δήμος Ραφήνας - Πικερμίου": "rafina.sql"}
 
 SOURCES = {
     "both": "ΥΠΕΣ 14/08/2026 και ΚΕΔΕ 2024-2028",

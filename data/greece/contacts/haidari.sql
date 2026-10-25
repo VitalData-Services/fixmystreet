@@ -18,7 +18,8 @@ INSERT INTO haidari_categories VALUES
 UPDATE contacts SET state = 'deleted', editor = 'import', whenedited = now()
  WHERE body_id = (SELECT id FROM body WHERE name = 'Δήμος Χαϊδαρίου')
    AND state <> 'deleted'
-   AND category NOT IN (SELECT category FROM haidari_categories);
+   AND category NOT IN (SELECT category FROM haidari_categories)
+   AND category <> 'Κατάληψη κοινόχρηστου χώρου';   -- the hidden category of dimoi-katalipsi.sql
 
 INSERT INTO contacts (body_id, category, email, state, editor, whenedited, note)
 SELECT b.id, c.category, 'protokollo@haidari.gr', 'confirmed', 'import', now(), c.note
