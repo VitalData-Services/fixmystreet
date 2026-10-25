@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the static municipality data used by the homepage minimap.
 
-Writes web/cobrands/greece/dimoi/index.json (name, bbox and contact details per
-municipality) and one <osm_relation_id>.json boundary file per municipality, so the
+Writes web/cobrands/greece/dimoi/index.json (name, bbox, a point inside it for the map of
+reports on /reports, and contact details per municipality) and one <osm_relation_id>.json boundary file per municipality, so the
 browser can find the municipality under the map centre without any third-party call.
 
 Usage:
@@ -18,6 +18,8 @@ import csv
 import json
 import os
 import sys
+
+from shapely.geometry import shape
 
 CONTACT_FIELDS = [
     ("email_general", "phone_general", "Δήμος"),
@@ -53,6 +55,16 @@ def bbox(geom):
     return [round(min(xs), 4), round(min(ys), 4), round(max(xs), 4), round(max(ys), 4)]
 
 
+def label_point(geom):
+    """A point inside the municipality, on its largest part (so an island municipality's is not on
+    a rock), where reports/index.html puts its count."""
+    s = shape(geom)
+    if s.geom_type == "MultiPolygon":
+        s = max(s.geoms, key=lambda g: g.area)
+    p = s.representative_point()
+    return [round(p.x, 5), round(p.y, 5)]
+
+
 def load_rows(csv_path, override_paths):
     rows = {}
     with open(csv_path, newline="") as f:
@@ -76,7 +88,7 @@ def main(csv_path, geoms_path, out_dir, *override_paths):
         if not geom:
             print("no geometry for", rel, row["name_el"], file=sys.stderr)
             continue
-        entry = {"r": int(rel), "n": row["name_el"], "b": bbox(geom)}
+        entry = {"r": int(rel), "n": row["name_el"], "b": bbox(geom), "p": label_point(geom)}
         if row.get("website"):
             entry["w"] = row["website"]
         contacts = []
