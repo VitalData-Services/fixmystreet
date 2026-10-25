@@ -36,6 +36,9 @@ services:
       # Same as the image's, except that text without Latin lowercase letters (Greek) is no longer
       # taken for SHOUTING and lowercased (cleanup_text).
       - ./perllib/Utils.pm:/var/www/fixmystreet/fixmystreet/perllib/Utils.pm:ro
+      # Same as the image's, except that the /reports category counts include only public reports
+      # (hidden and private ones made them add up to more than the map showed).
+      - ./perllib/FixMyStreet/Script/UpdateAllReports.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Script/UpdateAllReports.pm:ro
       # 👍/👎 on reports (POST /greece/vote/<id>).
       - ./perllib/FixMyStreet/App/Controller/GreeceVote.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceVote.pm:ro
       # Photos are anonymised before they are stored (anonymiser service below); the police copies,
