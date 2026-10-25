@@ -11,6 +11,9 @@
 # request comes from the tunnel, so the rate limit is per visitor address in CF-Connecting-IP.
 proxy_cache_path /var/cache/nginx/places levels=1:2 keys_zone=places:5m max_size=50m inactive=7d;
 limit_req_zone $http_cf_connecting_ip zone=places_rate:5m rate=5r/s;
+# Municipality outlines (location /mapit/ below): kept for 30 days, so global MapIt sees each once.
+proxy_cache_path /var/cache/nginx/mapit levels=1:2 keys_zone=mapit:2m max_size=100m inactive=30d;
+limit_req_zone $visitor zone=mapit_rate:5m rate=5r/s;
 
 # Reports need no account or email confirmation, so submissions are limited per visitor: POSTs
 # that create a report or an update, or send an email to an address typed into a form (sign-in,
@@ -59,11 +62,24 @@ server {
     rewrite '^/reports/{/rss/(.*)}$' /rss/$1         permanent;
     rewrite ^/alerts/?$              /alert          permanent;
 
-    # The map's MapIt calls from the browser (a municipality's outline on /reports/<Δήμος>) go to the
-    # local MapIt service, which passes what it does not answer itself to global MapIt. They went to
-    # the UK MapIt, as //area/..., and got 404/503, so no outline was drawn.
+    # The map's only MapIt call from the browser, a municipality's outline on /reports/<Δήμος>, goes to
+    # the local MapIt service, which gets it from global MapIt; nginx keeps it (proxy_cache mapit), so
+    # visitors cannot run up calls to the MapIt the site depends on. Nothing else is passed on. It
+    # used to go to the UK MapIt, as //area/..., and got 404/503, so no outline was drawn.
+    location ~ ^/mapit/area/[0-9]+\.geojson$ {
+        limit_req zone=mapit_rate burst=10 nodelay;
+        limit_req_status 429;
+        # FixMyStreet's own query only, whatever is asked, so one copy per municipality.
+        rewrite ^/mapit/(area/[0-9]+\.geojson)$ /$1?simplify_tolerance=0.0001? break;
+        proxy_pass http://mapit-local.svc:8080;
+        proxy_cache mapit;
+        proxy_cache_key $uri;
+        proxy_cache_valid 200 30d;
+        proxy_cache_use_stale error timeout updating;
+        add_header X-Cache $upstream_cache_status;
+    }
     location /mapit/ {
-        proxy_pass http://mapit-local.svc:8080/;
+        return 404;
     }
 
     location = /places {
