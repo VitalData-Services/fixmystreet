@@ -8,12 +8,12 @@ INSERT INTO greece_category_en VALUES
   ('Οδοφωτισμός', 'Street lighting'),
   ('Πράσινο και δέντρα', 'Trees and green spaces'),
   ('Πρόβλημα με πεζοδρόμιο', 'Pavement problem'),
-  ('Σκουπίδια και καθαριότητα', 'Rubbish and cleaning'),
+  ('Θέματα καθαριότητας', 'Cleaning issues'),
   ('Φθαρμένο πεζοδρόμιο ή ράμπα ΑμεΑ', 'Damaged pavement or wheelchair ramp'),
   ('Εμπόδιο σε πεζοδρόμιο (τραπεζοκαθίσματα, αντικείμενα)', 'Obstruction on the pavement (tables, objects)'),
   ('Στάθμευση σε ράμπα ή θέση ΑμεΑ, πεζοδρόμιο ή διάβαση', 'Parking on a disabled ramp or bay, pavement or crossing'),
   ('Στάθμευση σε φορτιστή EV ή εμπόδιο στη διέλευση', 'Parking at an EV charger or blocking the way'),
-  ('Άλλα', 'Other');
+  ('Άλλο', 'Other');
 DELETE FROM translation t USING contacts c, greece_category_en g
  WHERE t.tbl = 'contact' AND t.col = 'category' AND t.lang = 'en-gb' AND t.object_id = c.id AND c.category = g.category;
 INSERT INTO translation (tbl, object_id, col, lang, msgstr)
