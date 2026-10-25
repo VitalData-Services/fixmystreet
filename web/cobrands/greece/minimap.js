@@ -30,6 +30,9 @@
     var searchForm = document.getElementById('postcodeForm');
     var searchLine = document.getElementById('gr-minimap-search');
     var leaving = null;
+    // Phones: the address search waits behind «Αναζήτηση διεύθυνσης» from the start, not only once the
+    // location is found, and the map's message can be closed (theme.css).
+    var PHONE = !!(window.matchMedia && window.matchMedia('(max-width: 47.99em)').matches);
 
     // Once the location is found, the address search and the how-to steps fade out and give way to the
     // map; «Αναζήτηση διεύθυνσης» brings the search back. If finding the location fails, all of it shows
@@ -37,11 +40,13 @@
     function located(yes) {
         if (!front || !searchLine) { return; }
         clearTimeout(leaving);
-        orLine.hidden = yes;
-        searchLine.hidden = !yes;
+        orLine.hidden = yes || PHONE;
+        searchLine.hidden = !yes && !PHONE;
         if (!yes) {
             front.classList.remove('gr-leaving', 'gr-located');
-            if (searchForm) { searchForm.classList.remove('gr-search-open'); }
+            // On phones the messages point to the address search: it opens.
+            if (searchForm) { searchForm.classList.toggle('gr-search-open', PHONE); }
+            if (PHONE) { searchLine.hidden = true; }
         } else if (!front.classList.contains('gr-located')) {
             front.classList.add('gr-leaving');
             leaving = setTimeout(function () {
@@ -51,14 +56,49 @@
         }
     }
     if (searchLine) {
-        searchLine.querySelector('button').addEventListener('click', function () {
+        searchLine.querySelector('button').addEventListener('click', function (e) {
+            e.stopPropagation();
             searchLine.hidden = true;
-            orLine.hidden = false;
+            orLine.hidden = PHONE;
             if (searchForm) { searchForm.classList.add('gr-search-open'); }
             var pc = document.getElementById('pc');
             if (pc) { pc.focus(); }
         });
     }
+    // Phones: «Αναζήτηση διεύθυνσης» right under the buttons, and the search as a pop-up over the page
+    // (theme.css), which a tap outside it or Escape closes.
+    if (PHONE && searchLine && searchForm && front) {
+        box.insertBefore(searchLine, card);
+        var closeSearch = function () {
+            if (!searchForm.classList.contains('gr-search-open')) { return; }
+            searchForm.classList.remove('gr-search-open');
+            searchLine.hidden = false;
+        };
+        document.addEventListener('click', function (e) {
+            if (!searchForm.contains(e.target)) { closeSearch(); }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeSearch(); }
+        });
+    }
+
+    // The map's message on phones sits on the map; ✕ hides it for the visit. A new message after a failed
+    // location search shows it again, as it says what to do next.
+    var statusClose = document.createElement('button');
+    statusClose.type = 'button';
+    statusClose.className = 'gr-minimap__status-close';
+    statusClose.setAttribute('aria-label', t('Κλείσιμο του μηνύματος', 'Close the message'));
+    statusClose.textContent = '\u2715';
+    status.parentNode.insertBefore(statusClose, status.nextSibling);
+    function hideStatus(yes) {
+        status.classList.toggle('gr-minimap__status--closed', yes);
+        statusClose.hidden = yes;
+    }
+    statusClose.addEventListener('click', function () {
+        hideStatus(true);
+        try { sessionStorage.setItem('gr-minimap-status', 'closed'); } catch (e) {}
+    });
+    try { if (sessionStorage.getItem('gr-minimap-status') === 'closed') { hideStatus(true); } } catch (e) {}
 
     function hasWebGL() {
         try {
@@ -75,7 +115,11 @@
             return l['source-layer'] !== 'building' && l.type !== 'fill-extrusion';
         });
         box.hidden = false;
-        orLine.hidden = false;
+        orLine.hidden = PHONE;
+        if (PHONE && searchLine && front) {
+            searchLine.hidden = false;
+            front.classList.add('gr-minimap-on');
+        }
         init(style);
     }, function () { /* keep the plain address search only */ });
 
@@ -240,6 +284,7 @@
             }, function (err) {
                 locateBtn.disabled = false;
                 located(false);
+                hideStatus(false);
                 status.textContent = errors[err.code] || t('Κάτι πήγε στραβά με την εύρεση της θέσης. Γράψε μια διεύθυνση παρακάτω.', 'Something went wrong finding your location. Enter an address below.');
             }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
         }
