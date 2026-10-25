@@ -54,8 +54,14 @@ services:
       - ./web/robots.txt:/var/www/fixmystreet/fixmystreet/web/robots.txt:ro
       - ./web/sitemap.xml:/var/www/fixmystreet/fixmystreet/web/sitemap.xml:ro
       # Uploaded photos (UPLOAD_DIR '../upload/') and the caches must outlive the container: without
-      # these, recreating it lost every report's photo (2026-10-24).
-      - fixmystreet-upload:/var/www/fixmystreet/upload
+      # these, recreating it lost every report's photo (2026-10-24). The photos are a plain folder on
+      # the host (owned by uid 1000, fms in the container), to be seen and backed up from there; it must
+      # exist beforehand, else the app does not start (rather than run on an empty folder).
+      - type: bind
+        source: ${FMS_UPLOAD_DIR:-/data/fms/uploads}
+        target: /var/www/fixmystreet/upload
+        bind:
+          create_host_path: false
       - fixmystreet-cache:/var/www/fixmystreet/cache
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - type: tmpfs
@@ -153,6 +159,5 @@ services:
 
 volumes:
   fixmystreet-pgdata:
-  fixmystreet-upload:
   fixmystreet-cache:
   fixmystreet-originals:
