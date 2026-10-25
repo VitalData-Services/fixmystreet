@@ -59,9 +59,11 @@ server {
     rewrite '^/reports/{/rss/(.*)}$' /rss/$1         permanent;
     rewrite ^/alerts/?$              /alert          permanent;
 
-    location /mapit {
-        proxy_pass https://mapit.mysociety.org/;
-        proxy_set_header X-Real-IP $remote_addr;
+    # The map's MapIt calls from the browser (a municipality's outline on /reports/<Δήμος>) go to the
+    # local MapIt service, which passes what it does not answer itself to global MapIt. They went to
+    # the UK MapIt, as //area/..., and got 404/503, so no outline was drawn.
+    location /mapit/ {
+        proxy_pass http://mapit-local.svc:8080/;
     }
 
     location = /places {
