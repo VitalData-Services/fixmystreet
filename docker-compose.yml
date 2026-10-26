@@ -1,5 +1,14 @@
+# Container logs (nginx's carry visitors' IP addresses) are kept to 3 files of 10 MB per container,
+# then the oldest goes (privacy page §8, «only as long as needed»). Owner, 2026-10-27.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   nginx:
+    logging: *logging
     image: nginx:1.27.2
     depends_on:
       - fixmystreet
@@ -13,6 +22,7 @@ services:
         aliases:
           - nginx.svc
   fixmystreet:
+    logging: *logging
     image: fixmystreets-gr:latest
     build:
       context: ./docker/greece
@@ -104,6 +114,7 @@ services:
         aliases:
           - fixmystreet.svc
   postgres:
+    logging: *logging
     build:
       dockerfile_inline: |
         FROM postgres:13.11
@@ -125,6 +136,7 @@ services:
       timeout: 5s
       retries: 5
   memcached:
+    logging: *logging
     image: memcached:1.6.32
     restart: always
     networks:
@@ -134,6 +146,7 @@ services:
   # Blurs number plates and faces in every uploaded photo and reads the plates (docker/greece/anonymiser);
   # only the app talks to it.
   anonymiser:
+    logging: *logging
     build: ./docker/greece/anonymiser
     image: fixmystreets-anonymiser:latest
     restart: unless-stopped
@@ -151,6 +164,7 @@ services:
   # Checks a report's video (a video, at most 45 s) and re-encodes it to 720p without metadata
   # (docker/greece/video); one at a time, two CPU threads.
   video:
+    logging: *logging
     build: ./docker/greece/video
     image: fixmystreets-video:latest
     restart: unless-stopped
@@ -170,6 +184,7 @@ services:
   # Municipality lookups answered locally where certain, else by global MapIt (docker/mapit-local);
   # FixMyStreet uses it through MAPIT_URL in conf/general.yml-local.
   mapit-local:
+    logging: *logging
     build: ./docker/mapit-local
     image: fixmystreets-mapit-local:latest
     restart: unless-stopped
@@ -180,6 +195,7 @@ services:
           - mapit-local.svc
   # Self-hosted map (docker/greece/tiles, data built by bin/greece/build-tiles.sh), proxied at /tiles/.
   tiles:
+    logging: *logging
     image: maptiler/tileserver-gl:v5.6.0
     restart: always
     command: ["--config", "/data/config.json", "--public_url", "${TILES_PUBLIC_URL:-https://fixmystreets.gr/tiles/}"]
