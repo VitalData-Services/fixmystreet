@@ -560,8 +560,9 @@ sub greece_nsfw {
 # and with GREECE_MODERATE or more keep the update from changing the report's state. Once it is saved
 # and confirmed, update_email_shortlisted_user hides it and tells the contact address (below).
 # Closing a report (marked fixed, or a fixed or closed state) needs a moderator's approval unless a
-# body's staff or a superuser does it: the update is published, the report keeps its state, and the
-# request goes to the contact address to approve in the admin (update_email_shortlisted_user).
+# body's staff or a superuser does it: the update is published, a «fixed» puts the report in «fix
+# pending» (data/greece/states.sql; only with an email), and the request goes to the contact address
+# to approve in the admin (update_email_shortlisted_user).
 sub process_open311_extras {
     my ($self, $c, $body, $extra) = @_;
     return unless $c && $c->action && $c->action->namespace eq 'report/update' && $c->req->method eq 'POST';
@@ -575,10 +576,20 @@ sub process_open311_extras {
         my $state = $update->problem_state // '';
         my $closes = FixMyStreet::DB::Result::Problem->fixed_states->{$state}
             || FixMyStreet::DB::Result::Problem->closed_states->{$state};
-        if ($update->mark_fixed || ($closes && $state ne $problem->state)) {
+        my $fixed = $update->mark_fixed || FixMyStreet::DB::Result::Problem->fixed_states->{$state};
+        if ($fixed && !$c->user_exists && ($c->get_param('username_register') // '') !~ /\S/) {
+            # «Fixed» needs an email (owner, 2026-10-27): it counts once its confirmation link is opened.
+            $c->stash->{field_errors}{username_register} = $self->greece_t(
+                'Για να δηλώσεις ότι το πρόβλημα διορθώθηκε, γράψε το email σου· θα σου στείλουμε σύνδεσμο επιβεβαίωσης.',
+                'To say the problem is fixed, enter your email; we will send you a confirmation link.');
+        } elsif ($fixed || ($closes && $state ne $problem->state)) {
+            # From a citizen, «fixed» puts the report in «fix pending» (still open) until a moderator or
+            # the body's staff sets «Διορθώθηκε»; another closing state leaves it as it is. Either way the
+            # contact address is asked to look (greece_close_request_email).
             $update->set_extra_metadata(greece_close_requested => $state || 'fixed - user');
             $update->mark_fixed(0);
-            $update->problem_state($problem->state);
+            $update->problem_state($fixed && FixMyStreet::DB->resultset('State')->search({ label => 'fix pending' })->count
+                ? 'fix pending' : $problem->state);
         }
     }
     if ($self->greece_nsfw($update, $c->stash->{upload_fileid})) {
