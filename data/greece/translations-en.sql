@@ -8,7 +8,7 @@ INSERT INTO greece_category_en VALUES
   ('Οδοφωτισμός', 'Street lighting'),
   ('Πράσινο και δέντρα', 'Trees and green spaces'),
   ('Πρόβλημα με πεζοδρόμιο', 'Pavement problem'),
-  ('Θέματα καθαριότητας', 'Cleaning issues'),
+  ('Φρεάτια και καθαριότητα', 'Drains and cleaning'),
   ('Φθαρμένο πεζοδρόμιο ή ράμπα ΑμεΑ', 'Damaged pavement or wheelchair ramp'),
   ('Εμπόδιο σε πεζοδρόμιο (τραπεζοκαθίσματα, αντικείμενα)', 'Obstruction on the pavement (tables, objects)'),
   ('Στάθμευση σε ράμπα ή θέση ΑμεΑ, πεζοδρόμιο ή διάβαση', 'Parking on a disabled ramp or bay, pavement or crossing'),

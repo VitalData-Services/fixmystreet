@@ -7,7 +7,7 @@ INSERT INTO raf_categories VALUES
   ('Λακκούβα ή φθορά οδοστρώματος', 'dty@4059.syzefxis.gov.gr', 'Τεχνική Υπηρεσία'),
   ('Πρόβλημα με πεζοδρόμιο', 'dty@4059.syzefxis.gov.gr', 'Τεχνική Υπηρεσία'),
   ('Οδοφωτισμός', 'dty@4059.syzefxis.gov.gr', 'Τεχνική Υπηρεσία'),
-  ('Θέματα καθαριότητας', 'kathariotita@0164.syzefxis.gov.gr', 'Καθαριότητα'),
+  ('Φρεάτια και καθαριότητα', 'kathariotita@0164.syzefxis.gov.gr', 'Καθαριότητα'),
   ('Πράσινο και δέντρα', 'prasino@0164.syzefxis.gov.gr', 'Πράσινο'),
   ('Άλλο', 'protokolo@0164.syzefxis.gov.gr', 'Πρωτόκολλο · τηλ. 22943 21001');
 INSERT INTO contacts (body_id, category, email, state, editor, whenedited, note)

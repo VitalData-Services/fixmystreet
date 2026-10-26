@@ -7,7 +7,7 @@ INSERT INTO pir_categories VALUES
   ('Λακκούβα ή φθορά οδοστρώματος', 'odopapoh@piraeus.gov.gr', 'Τμήμα Οδικού Δικτύου, Αποχέτευσης, Ανοικτών Χώρων και Παιδικών Χαρών, Θηβών 78'),
   ('Πρόβλημα με πεζοδρόμιο', 'odopapoh@piraeus.gov.gr', 'Τμήμα Οδικού Δικτύου, Αποχέτευσης, Ανοικτών Χώρων και Παιδικών Χαρών, Θηβών 78'),
   ('Οδοφωτισμός', 'gramarchitec@piraeus.gov.gr', 'Διεύθυνση Τεχνικών Υπηρεσιών, Θηβών 78 · τηλ. 213 2123010'),
-  ('Θέματα καθαριότητας', 'kathariotita@piraeus.gov.gr', 'Καθαριότητα (owner, 2026-10-26)'),
+  ('Φρεάτια και καθαριότητα', 'kathariotita@piraeus.gov.gr', 'Καθαριότητα (owner, 2026-10-26)'),
   ('Πράσινο και δέντρα', 'gramarchitec@piraeus.gov.gr', 'Διεύθυνση Τεχνικών Υπηρεσιών, Θηβών 78 · τηλ. 213 2123010'),
   ('Άλλο', 'gramarchitec@piraeus.gov.gr', 'Διεύθυνση Τεχνικών Υπηρεσιών, Θηβών 78 · τηλ. 213 2123010');
 INSERT INTO contacts (body_id, category, email, state, editor, whenedited, note)
