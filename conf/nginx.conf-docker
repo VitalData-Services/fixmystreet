@@ -65,6 +65,19 @@ server {
 
     client_max_body_size 10m;
 
+    # Security headers (owner, 2026-10-27). HSTS for this host only (no includeSubDomains, no preload
+    # yet). Camera, microphone and location stay allowed for the site itself: the report form takes
+    # photos, records video and asks for the location. The CSP only reports for now (the browser's
+    # console), from what the pages load: Turnstile, the self-hosted Plausible, blob: previews.
+    # nginx drops these in a location that has its own add_header: the static ones below repeat
+    # the two that matter there (HSTS, nosniff).
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), serial=()" always;
+    add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://plausible.taneda.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com https://plausible.taneda.dev; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+
     # These rewrite rules are ported from the Apache configuration in
     # conf/httpd.conf
 
@@ -92,6 +105,8 @@ server {
         proxy_cache_valid 200 30d;
         proxy_cache_use_stale error timeout updating;
         add_header X-Cache $upstream_cache_status;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
     location /mapit/ {
         return 404;
@@ -133,6 +148,8 @@ server {
         alias /var/lib/fms-videos/ready/;
         types { video/mp4 mp4; }
         add_header Cache-Control "private, no-store";
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     location = /places {
@@ -152,6 +169,8 @@ server {
         proxy_cache_key $arg_q;
         proxy_cache_valid 200 1d;
         add_header Cache-Control "public, max-age=3600";
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     # Self-hosted map tiles and style (tiles compose service).
@@ -160,6 +179,8 @@ server {
         proxy_set_header Host $host;
         proxy_hide_header Cache-Control;
         add_header Cache-Control "public, max-age=86400";
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     location ~ ^/(cobrands|vendor|js|theme|i)/ {
@@ -170,6 +191,8 @@ server {
         proxy_pass http://fixmystreet.svc:9000;
         proxy_hide_header Cache-Control;
         add_header Cache-Control $static_cache_control;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     location / {
