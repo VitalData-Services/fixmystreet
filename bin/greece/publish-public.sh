@@ -29,6 +29,8 @@ perllib/FixMyStreet/PhotoStorage/Greece.pm
 perllib/Utils.pm
 perllib/FixMyStreet/Script/UpdateAllReports.pm
 data/greece/votes.sql
+bin/greece/send-digest
+data/greece/contacts/digest.sql
 templates/web/greece
 templates/email/greece
 web/cobrands/greece

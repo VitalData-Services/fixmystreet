@@ -1,0 +1,6 @@
+# FixMyStreets: the municipalities' reports, one email per address at 07:00, 13:00 and 19:00 Athens
+# time (bin/greece/send-digest). It runs every hour and sends only in those hours, so the clock change
+# needs nothing here. Police reports are not in it (send-reports, at once).
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-digest /etc/cron.d/
+SHELL=/bin/sh
+2 * * * * debian docker exec -i -w /var/www/fixmystreet/fixmystreet/bin fixmystreet-fixmystreet-1 ./cron-wrapper perl - < /opt/fixmystreet/bin/greece/send-digest >> /var/log/fixmystreets/digest.log 2>&1
