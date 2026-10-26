@@ -113,11 +113,13 @@ sub anonymous_account {
 # real visitors (automated browsers never get a token) before it can turn anyone away.
 sub greece_turnstile_sitekey { FixMyStreet->config('TURNSTILE_SITEKEY') }
 
+use constant GREECE_TURNSTILE_KEEP => 12 * 3600;   # see greece_turnstile_remembered
 sub greece_turnstile_ok {
     my ($self, $c) = @_;
     my $secret = FixMyStreet->config('TURNSTILE_SECRET') or return 1;
     return 1 if $c->user_exists;
     return $c->stash->{greece_turnstile} if defined $c->stash->{greece_turnstile};   # a token works once
+    return 1 if $self->greece_turnstile_remembered;
     my $token = $c->get_param('cf-turnstile-response') // '';
     my $ok = 0;
     if ($token ne '') {
@@ -137,8 +139,19 @@ sub greece_turnstile_ok {
     } else {
         $c->log->warn('Turnstile refused: no token');
     }
+    $c->session->{greece_turnstile_until} = time + GREECE_TURNSTILE_KEEP if $ok;
     $ok = 1 unless FixMyStreet->config('TURNSTILE_ENFORCE');
     return $c->stash->{greece_turnstile} = $ok;
+}
+
+# Once a visitor has passed the check, the session remembers it for 12 hours, so the next forms do
+# not ask again (owner, 2026-10-27); _turnstile.html then shows no check at all. Only a session the
+# visitor already has is looked at: none is started for this.
+sub greece_turnstile_remembered {
+    my $self = shift;
+    my $c = $self->{c} or return 0;
+    return 0 unless $c->sessionid;
+    return ($c->session->{greece_turnstile_until} // 0) > time ? 1 : 0;
 }
 
 sub greece_turnstile_error {
