@@ -182,6 +182,7 @@ sub check_login_disallowed {
     my $self = shift;
     my $c = $self->{c} or return 0;
     $self->greece_2fa_gate($c);
+    $self->greece_report_number_redirect($c);
     $self->greece_default_name($c);
     return 0 unless $c->req->method eq 'POST' && $c->req->path =~ m{^alert/subscribe/?$};
     return 0 if $c->user_exists || $c->get_param('rss') || ($c->get_param('rznvy') // '') eq '';
@@ -697,6 +698,21 @@ sub reports_hook_restrict_bodies_list {
 # authenticator app, is off for everyone. Staff cannot use Google, Apple or Microsoft at all
 # (GreeceSocial.pm).
 sub must_have_2fa { 'skip' }
+
+# A report's address is its number (/report/20261026-03, greece_ref). FixMyStreet's own links, in
+# the admin, alert emails and elsewhere, still say /report/<id>: those go on to the number, so the
+# database id is not what people see and pass on (owner, 2026-10-26). The number's page itself is
+# shown through /greece/report-ref (GreeceReportRef.pm), so this does not loop.
+sub greece_report_number_redirect {
+    my ($self, $c) = @_;
+    return unless $c->req->method eq 'GET' && $c->req->path =~ m{^report/(\d+)/?$};
+    my $problem = FixMyStreet::DB->resultset('Problem')->find($1) or return;
+    my $url = $problem->url;
+    return if $url =~ m{^/report/\d+$};
+    my $q = $c->req->uri->query;
+    $c->res->redirect($url . (defined $q && $q ne '' ? "?$q" : ''), 301);
+    $c->detach;
+}
 
 # Until the emailed code is entered, a signed-in superuser or staff member sees only that page (and
 # can sign out). Runs early on every request (check_login_disallowed).
