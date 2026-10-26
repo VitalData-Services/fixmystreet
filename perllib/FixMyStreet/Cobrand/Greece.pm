@@ -711,6 +711,11 @@ sub greece_2fa_gate {
     my $r = '/' . $c->req->path;
     my $q = $c->req->uri->query;
     $r .= "?$q" if defined $q && $q ne '' && $c->req->method eq 'GET';
+    # From a sign-in page, on to where that page was taking them, never back to signing in.
+    if ($c->req->path =~ m{^(auth|M)(/|$)}) {
+        my $next = $c->get_param('r') // '';
+        $r = $next =~ m{^/?([^/].*)?$} && $next !~ m{^/?(auth|M)(/|$)} && $next ne '' ? '/' . ($next =~ s{^/}{}r) : '/my';
+    }
     $c->res->redirect($c->uri_for('/greece/2fa', { r => $r }));
     $c->detach;
 }
