@@ -4,7 +4,8 @@
 -- 247 stations, 39 directorates and 73 traffic units for 332 municipalities.
 -- Each municipality's area is covered by a station or directorate body and, where one is known,
 -- a Τμήμα Τροχαίας body, both with the category below, so a report is sent to both in one email.
--- The category is private (non_public), because a complaint can name a vehicle; the email is the
+-- The category is public since 2026-10-26, without personal details (Greece.pm greece_public_complaint:
+-- anonymous, plates masked in the description); the email is the
 -- complaint letter in submit-ev.txt/html, chosen by email_template.
 -- The station or directorate body also has the ΑμεΑ category, which only links to xorisempodia.gr
 -- (disable_form): FixMyStreet takes no report in it, so its e-mail is never used.
@@ -1045,8 +1046,8 @@ SELECT body_id, area_id FROM police_body_areas
 ON CONFLICT (body_id, area_id) DO NOTHING;
 
 INSERT INTO contacts (body_id, category, email, state, editor, whenedited, note, non_public, extra)
-SELECT b.id, 'Στάθμευση σε φορτιστή EV ή εμπόδιο στη διέλευση', pb.email, 'confirmed', 'import', now(), pb.note, true,
-       CASE WHEN pb.questions THEN '{"email_template": "ev", "_fields": [{"code": "idiotiki", "variable": "false", "order": 0, "datatype": "string", "required": "false", "description": "Οι αναφορές αυτής της κατηγορίας δεν δημοσιεύονται στον ιστότοπο. Στέλνονται, με το όνομα και τα στοιχεία επικοινωνίας σου, μόνο στην αρμόδια υπηρεσία της Ελληνικής Αστυνομίας."}, {"code": "paravasi", "variable": "true", "order": 1, "datatype": "singlevaluelist", "required": "true", "description": "Τι συμβαίνει;", "values": [{"key": "fortistis", "name": "Στάθμευση σε θέση φόρτισης ηλεκτρικών οχημάτων χωρίς φόρτιση"}, {"key": "eisodos", "name": "Στάθμευση μπροστά σε είσοδο ή έξοδο οχημάτων (γκαράζ)"}, {"key": "diplo", "name": "Διπλή στάθμευση ή όχημα που κλείνει τον δρόμο"}, {"key": "stasi", "name": "Στάθμευση σε στάση λεωφορείου"}, {"key": "empodia", "name": "Παράνομα εμπόδια ή κώνοι από κατάστημα"}, {"key": "p72", "name": "Αυθαίρετη ή μη εγκεκριμένη διαγράμμιση και πινακίδα P-72"}]}, {"code": "pinakida", "variable": "true", "order": 2, "datatype": "string", "required": "false", "description": "Αριθμός κυκλοφορίας (πινακίδα), αν αφορά συγκεκριμένο όχημα"}]}'::jsonb
+SELECT b.id, 'Στάθμευση σε φορτιστή EV ή εμπόδιο στη διέλευση', pb.email, 'confirmed', 'import', now(), pb.note, false,
+       CASE WHEN pb.questions THEN '{"email_template": "ev", "_fields": [{"code": "idiotiki", "variable": "false", "order": 0, "datatype": "string", "required": "false", "description": "Η καταγγελία εμφανίζεται στον χάρτη χωρίς όνομα, στοιχεία επικοινωνίας και πινακίδα. Αυτά στέλνονται μόνο στην αρμόδια υπηρεσία της Ελληνικής Αστυνομίας."}, {"code": "paravasi", "variable": "true", "order": 1, "datatype": "singlevaluelist", "required": "true", "description": "Τι συμβαίνει;", "values": [{"key": "fortistis", "name": "Στάθμευση σε θέση φόρτισης ηλεκτρικών οχημάτων χωρίς φόρτιση"}, {"key": "eisodos", "name": "Στάθμευση μπροστά σε είσοδο ή έξοδο οχημάτων (γκαράζ)"}, {"key": "diplo", "name": "Διπλή στάθμευση ή όχημα που κλείνει τον δρόμο"}, {"key": "stasi", "name": "Στάθμευση σε στάση λεωφορείου"}, {"key": "empodia", "name": "Παράνομα εμπόδια ή κώνοι από κατάστημα"}, {"key": "p72", "name": "Αυθαίρετη ή μη εγκεκριμένη διαγράμμιση και πινακίδα P-72"}]}, {"code": "pinakida", "variable": "true", "order": 2, "datatype": "string", "required": "false", "description": "Αριθμός κυκλοφορίας (πινακίδα), αν αφορά συγκεκριμένο όχημα"}]}'::jsonb
             ELSE '{"email_template": "ev"}'::jsonb END
   FROM police_bodies pb JOIN body b ON b.name = pb.name AND NOT b.deleted
 ON CONFLICT (body_id, category) DO UPDATE
