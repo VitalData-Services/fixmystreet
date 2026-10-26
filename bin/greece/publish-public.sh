@@ -24,6 +24,7 @@ perllib/FixMyStreet/App/Controller/GreeceNearby.pm
 perllib/FixMyStreet/App/Controller/GreeceReportRef.pm
 perllib/FixMyStreet/App/Controller/GreeceVideo.pm
 perllib/FixMyStreet/App/Controller/GreeceOTP.pm
+perllib/FixMyStreet/App/Controller/GreecePassword.pm
 docker/greece/video
 perllib/FixMyStreet/PhotoStorage/Greece.pm
 perllib/Utils.pm

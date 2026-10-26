@@ -59,6 +59,7 @@ services:
       - ./perllib/FixMyStreet/App/Controller/GreeceVideo.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceVideo.pm:ro
       # A 6-digit emailed code that confirms a reporter's email (POST /greece/otp/…).
       - ./perllib/FixMyStreet/App/Controller/GreeceOTP.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceOTP.pm:ro
+      - ./perllib/FixMyStreet/App/Controller/GreecePassword.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreecePassword.pm:ro
       - fixmystreet-videos:/var/lib/fms-videos
       - fixmystreet-originals:/var/lib/fms-originals
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
