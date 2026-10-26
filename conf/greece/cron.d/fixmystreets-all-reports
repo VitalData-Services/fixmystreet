@@ -1,0 +1,5 @@
+# FixMyStreets: the /reports statistics (data/all-reports-dashboard*.json), which FixMyStreet writes only
+# when bin/update-all-reports runs; without this they stay as they were when the container was set up.
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-all-reports /etc/cron.d/
+SHELL=/bin/sh
+7 * * * * debian docker exec -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/update-all-reports >> /var/log/fixmystreets/all-reports.log 2>&1

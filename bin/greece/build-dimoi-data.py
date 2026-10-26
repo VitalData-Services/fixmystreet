@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 from shapely.geometry import shape
 
@@ -81,6 +82,61 @@ def first_phone(text):
     return m.group(0).strip() if m else ""
 
 
+# Station names: astynomia.gr writes many in capitals without accents («Α.Τ. ΑΓΙΑΣ ΠΑΡΑΣΚΕΥΗΣ»). The
+# card shows them in normal case: the prefix spelled out, and each word as it is written, with its
+# accent, somewhere in the data (municipality and station names: «Αγίας Παρασκευής»); WORDS for the
+# few that appear nowhere else.
+_PREFIXES = [
+    (r"^Α\.?\s?Τ\.?\s+", "Αστυνομικό Τμήμα "), (r"^ΑΣΤΥΝ\.\s?ΤΜΗΜΑ\s+", "Αστυνομικό Τμήμα "),
+    (r"^ΑΣΤΥΝΟΜΙΚΟ\s+ΤΜΗΜΑ\s+", "Αστυνομικό Τμήμα "), (r"^Α\.?\s?Σ\.?\s+", "Αστυνομικός Σταθμός "),
+    (r"^ΑΣΤΥΝΟΜΙΚΟΣ\s+ΣΤΑΘΜΟΣ\s+", "Αστυνομικός Σταθμός "), (r"^Τ\.?\s?Τ\.?\s+", "Τμήμα Τροχαίας "),
+    (r"^ΤΜΗΜΑ\s+ΤΡΟΧΑΙΑΣ\s+", "Τμήμα Τροχαίας "), (r"^ΥΠΟΔ/ΝΣΗ\s+ΤΡΟΧΑΙΑΣ\s+", "Υποδιεύθυνση Τροχαίας "),
+    (r"^ΥΠΟΔ/ΝΣΗ\s+", "Υποδιεύθυνση "),
+]
+_SMALL = {"ΚΑΙ": "και", "ΤΟΥ": "του", "ΤΗΣ": "της", "ΤΩΝ": "των"}
+WORDS = {"ΑΝΑΛΗΨΕΩΣ": "Αναλήψεως", "ΚΑΜΙΝΙΩΝ": "Καμινίων", "ΜΕΤΑΜΟΡΦΩΣΗΣ": "Μεταμόρφωσης",
+         "ΝΕΟΥ": "Νέου", "ΠΑΓΚΡΑΤΙΟΥ": "Παγκρατίου"}
+_vocab = {}
+
+
+def _plain(word):
+    return "".join(c for c in unicodedata.normalize("NFD", word) if unicodedata.category(c) != "Mn").upper()
+
+
+def learn_words(text):
+    for w in re.findall(r"[Α-Ωα-ωΆ-ώϊϋΐΰ]+", text or ""):
+        if re.search(r"[α-ωά-ώ]", w):
+            counts = _vocab.setdefault(_plain(w), {})
+            counts[w] = counts.get(w, 0) + 1
+
+
+def normal_case(name):
+    """«Α.Τ. ΑΓΙΑΣ ΠΑΡΑΣΚΕΥΗΣ» → «Αστυνομικό Τμήμα Αγίας Παρασκευής»; a name with lower case is kept."""
+    name = (name or "").strip()
+    if not name or re.search(r"[α-ωά-ώ]", name):
+        return name
+    # «Α΄ Α.Τ. …», «Α΄Α.Τ …»: the station's number first, as in «Α' Αστυνομικό Τμήμα Αχαρνών».
+    order = ""
+    m = re.match(r"^([Α-Ω])[΄'’]\s*(?=Α\.?\s?Τ)", name)
+    if m:
+        order, name = m.group(1) + "' ", name[m.end():]
+    for pattern, repl in _PREFIXES:
+        if re.match(pattern, name):
+            name = re.sub(pattern, repl, name)
+            break
+    name = order + re.sub(r"\s*[-–]\s*", " - ", name)
+
+    def word(m):
+        w = m.group(0)
+        if w in _SMALL:
+            return _SMALL[w]
+        if w in WORDS:
+            return WORDS[w]
+        known = _vocab.get(_plain(w))
+        return max(known, key=known.get) if known else w[0] + w[1:].lower()
+    return re.sub(r"[Α-ΩΆΈΉΊΌΎΏΪΫ]{2,}", word, name)
+
+
 def police_station(row):
     """The police station from dimoi_police.csv's columns: {"n": name, "e": email, "t": phone}, the phone
     without its label ("Αξιωματικός Υπηρεσίας: 22820 22300") and only the first number. Where the file
@@ -92,7 +148,7 @@ def police_station(row):
         name, email = (row.get("directorate") or "").strip(), (row.get("directorate_email") or "").strip()
         if not email:
             return None
-    police = {"n": name or "Αστυνομικό Τμήμα", **({"e": email} if email else {}), **({"t": phone} if phone else {})}
+    police = {"n": normal_case(name) or "Αστυνομικό Τμήμα", **({"e": email} if email else {}), **({"t": phone} if phone else {})}
     if (row.get("match_method") or "") == "nearest-station":
         police["x"] = 1   # not in the municipality: the nearest one (Αγαθονήσι, Γαύδος)
     return police
@@ -118,7 +174,7 @@ def load_stations(path):
     with open(path, newline="") as f:
         for row in csv.DictReader(f):
             m = re.search(r"\+?\d[\d ]{6,}\d", row.get("phone") or "")
-            st = {"n": row["station"].strip(), "p": [round(float(row["lon"]), 5), round(float(row["lat"]), 5)]}
+            st = {"n": normal_case(row["station"]), "p": [round(float(row["lon"]), 5), round(float(row["lat"]), 5)]}
             if (row.get("email") or "").strip():
                 st["e"] = row["email"].strip()
             if m:
@@ -130,6 +186,11 @@ def load_stations(path):
 def main(csv_path, geoms_path, out_dir, *override_paths):
     stations_path = next((a.split("=", 1)[1] for a in override_paths if a.startswith("--stations=")), None)
     override_paths = [a for a in override_paths if not a.startswith("--stations=")]
+    # Words with their accents, for normal_case: every input file, and the police bodies' names.
+    police_sql = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../data/greece/contacts/police.sql")
+    for path in [csv_path, *override_paths, stations_path, police_sql]:
+        if path and os.path.exists(path):
+            learn_words(open(path, encoding="utf-8").read())
     stations = load_stations(stations_path)
     geoms = json.load(open(geoms_path))
     os.makedirs(out_dir, exist_ok=True)
