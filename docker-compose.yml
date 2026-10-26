@@ -7,6 +7,7 @@ services:
       - "8000:80"
     volumes:
       - ./conf/nginx.conf-docker:/etc/nginx/conf.d/default.conf
+      - fixmystreet-videos:/var/lib/fms-videos:ro
     networks:
       default:
         aliases:
@@ -52,6 +53,11 @@ services:
       - ./perllib/FixMyStreet/App/Controller/GreeceNearby.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceNearby.pm:ro
       # A report's page at its number, /report/20261026-03 (nginx rewrites to /greece/report-ref/…).
       - ./perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:ro
+      # A video with a report (POST /greece/video/…), kept on the videos volume; never published.
+      # The volume belongs to uid 1000 (fms here, fmsvideo in the video service): once, after it is
+      # created: docker compose exec -u root fixmystreet chown 1000:1000 /var/lib/fms-videos
+      - ./perllib/FixMyStreet/App/Controller/GreeceVideo.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceVideo.pm:ro
+      - fixmystreet-videos:/var/lib/fms-videos
       - fixmystreet-originals:/var/lib/fms-originals
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
@@ -138,6 +144,25 @@ services:
       default:
         aliases:
           - anonymiser.svc
+  # Checks a report's video (a video, at most 45 s) and re-encodes it to 720p without metadata
+  # (docker/greece/video); one at a time, two CPU threads.
+  video:
+    build: ./docker/greece/video
+    image: fixmystreets-video:latest
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 2
+    volumes:
+      - fixmystreet-videos:/var/lib/fms-videos
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      default:
+        aliases:
+          - video.svc
   # Municipality lookups answered locally where certain, else by global MapIt (docker/mapit-local);
   # FixMyStreet uses it through MAPIT_URL in conf/general.yml-local.
   mapit-local:
@@ -167,5 +192,6 @@ services:
 
 volumes:
   fixmystreet-pgdata:
+  fixmystreet-videos:
   fixmystreet-cache:
   fixmystreet-originals:

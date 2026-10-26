@@ -11,6 +11,8 @@
 # request comes from the tunnel, so the rate limit is per visitor address in CF-Connecting-IP.
 proxy_cache_path /var/cache/nginx/places levels=1:2 keys_zone=places:5m max_size=50m inactive=7d;
 limit_req_zone $http_cf_connecting_ip zone=places_rate:5m rate=5r/s;
+# Video uploads with a report (App::Controller::GreeceVideo): a few new uploads per visitor and minute.
+limit_req_zone $http_cf_connecting_ip zone=video_start:5m rate=6r/m;
 # Municipality outlines (location /mapit/ below): kept for 30 days, so global MapIt sees each once.
 proxy_cache_path /var/cache/nginx/mapit levels=1:2 keys_zone=mapit:2m max_size=100m inactive=30d;
 limit_req_zone $visitor zone=mapit_rate:5m rate=5r/s;
@@ -91,6 +93,35 @@ server {
     }
     location /mapit/ {
         return 404;
+    }
+
+    # Video uploads: slices of at most 9 MB (the page sends 8), and few new uploads per visitor.
+    location = /greece/video/start {
+        limit_req zone=video_start burst=3 nodelay;
+        limit_req_status 429;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_redirect off;
+        proxy_pass http://fixmystreet.svc:9000;
+    }
+    location /greece/video/chunk/ {
+        client_max_body_size 10m;
+        proxy_request_buffering on;
+        proxy_read_timeout 120s;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_redirect off;
+        proxy_pass http://fixmystreet.svc:9000;
+    }
+    # The video file itself, only after GreeceVideo has checked who asks (X-Accel-Redirect); nginx
+    # answers the Range requests that phones need.
+    location /internal-videos/ {
+        internal;
+        alias /var/lib/fms-videos/ready/;
+        types { video/mp4 mp4; }
+        add_header Cache-Control "private, no-store";
     }
 
     location = /places {
