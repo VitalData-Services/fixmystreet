@@ -69,6 +69,9 @@ server {
     rewrite '^/{/rss/(.*)}$'         /rss/$1         permanent;
     rewrite '^/reports/{/rss/(.*)}$' /rss/$1         permanent;
     rewrite ^/alerts/?$              /alert          permanent;
+    # A report's address is its number, /report/20261026-03 (Greece.pm greece_ref); FixMyStreet's
+    # /report/<id> takes digits only, so the number goes to the Greece controller that shows it.
+    rewrite '^/report/(\d{8}-\d+)/?$' /greece/report-ref/$1 last;
 
     # The map's only MapIt call from the browser, a municipality's outline on /reports/<Δήμος>, goes to
     # the local MapIt service, which gets it from global MapIt; nginx keeps it (proxy_cache mapit), so

@@ -21,6 +21,7 @@ perllib/FixMyStreet/App/Controller/GreecePhoto.pm
 perllib/FixMyStreet/App/Controller/GreeceAuth.pm
 perllib/FixMyStreet/App/Controller/GreeceSocial.pm
 perllib/FixMyStreet/App/Controller/GreeceNearby.pm
+perllib/FixMyStreet/App/Controller/GreeceReportRef.pm
 perllib/FixMyStreet/PhotoStorage/Greece.pm
 perllib/Utils.pm
 perllib/FixMyStreet/Script/UpdateAllReports.pm

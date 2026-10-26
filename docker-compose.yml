@@ -50,6 +50,8 @@ services:
       - ./perllib/FixMyStreet/App/Controller/GreeceSocial.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceSocial.pm:ro
       # Police complaints near a spot, as a count only, for the report form's notice (GET /greece/nearby-private).
       - ./perllib/FixMyStreet/App/Controller/GreeceNearby.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceNearby.pm:ro
+      # A report's page at its number, /report/20261026-03 (nginx rewrites to /greece/report-ref/…).
+      - ./perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:ro
       - fixmystreet-originals:/var/lib/fms-originals
       - ./templates/web/greece:/var/www/fixmystreet/fixmystreet/templates/web/greece
       - ./templates/email/greece:/var/www/fixmystreet/fixmystreet/templates/email/greece:ro
