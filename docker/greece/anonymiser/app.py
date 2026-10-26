@@ -3,7 +3,8 @@
 Detects license plates and faces in JPEG images, returns:
   - a "public" version with both plates and faces blurred,
   - a "police" version with only faces blurred,
-  - OCR results for plates with high confidence.
+  - OCR results for plates with high confidence,
+  - "nsfw": nudity found (NudeNet), so that the site holds the report for a moderator.
 
 Endpoints:
   POST /anonymise  — accept JPEG, return anonymised images + OCR
@@ -23,6 +24,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import cv2
 import numpy as np
 from fast_alpr import ALPR
+from nudenet import NudeDetector
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
@@ -116,12 +118,13 @@ def _blur_region(img: np.ndarray, x1: int, y1: int, x2: int, y2: int,
 
 _alpr: ALPR | None = None
 _face_det = None
+_nude = None
 _lock = threading.Lock()
 
 
 def _init_models():
     """Load ALPR and face-detection models.  Called once at startup."""
-    global _alpr, _face_det
+    global _alpr, _face_det, _nude
 
     with _lock:
         if _alpr is not None:
@@ -148,6 +151,9 @@ def _init_models():
             nms_threshold=0.3,
             top_k=5000,
         )
+        # NudeNet 3.4.2 (AGPL-3.0, its 320n model is in the package)
+        log.info("Loading NudeNet ...")
+        _nude = NudeDetector()
         log.info("All models loaded.")
 
 
@@ -286,6 +292,39 @@ def anonymise_image(jpeg_bytes: bytes):
     return public_b64, police_b64, plates, faces
 
 
+# Nudity: what holds a report for a moderator, with the lowest score that counts. Genitals and anus
+# count from a lower score than breasts and buttocks, which a beach or a statue can show. A wrong
+# hold costs a moderator's look; a missed one, an obscene photo on the map. (A marble statue's chest
+# scores about 0.6 as a breast, seen in a quarter.)
+_NSFW_THRESH = {
+    "MALE_GENITALIA_EXPOSED": 0.35,
+    "FEMALE_GENITALIA_EXPOSED": 0.35,
+    "ANUS_EXPOSED": 0.35,
+    "FEMALE_BREAST_EXPOSED": 0.6,
+    "BUTTOCKS_EXPOSED": 0.6,
+}
+
+
+def nsfw_check(jpeg_bytes: bytes) -> list[dict]:
+    """The nudity found in a JPEG, as [{"class", "score"}], highest score first."""
+    img = cv2.imdecode(np.frombuffer(jpeg_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        return []
+    # The model sees 320x320: on a whole street photo a person is a few pixels. So the whole image,
+    # and for a larger one also its four quarters (overlapping by a fifth); the best score per class.
+    views = [img]
+    h, w = img.shape[:2]
+    if max(h, w) > 640:
+        th, tw = int(h * 0.6), int(w * 0.6)
+        views += [img[y:y + th, x:x + tw] for y in (0, h - th) for x in (0, w - tw)]
+    best: dict[str, float] = {}
+    for view in views:
+        for d in _nude.detect(view):
+            if d["score"] >= _NSFW_THRESH.get(d["class"], 2):
+                best[d["class"]] = max(best.get(d["class"], 0), float(d["score"]))
+    return sorted(({"class": k, "score": round(v, 3)} for k, v in best.items()), key=lambda d: -d["score"])
+
+
 # ---------------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------------
@@ -309,13 +348,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._not_found()
 
     def _health(self):
-        ready = _alpr is not None and _face_det is not None
+        ready = _alpr is not None and _face_det is not None and _nude is not None
         status = 200 if ready else 503
         body = json.dumps({
             "ok": ready,
             "models": {
                 "alpr": "yolo-v9-t-384-license-plate-end2end + cct-xs-v2-global-model",
                 "face": "face_detection_yunet_2023mar.onnx",
+                "nsfw": "nudenet 3.4.2 320n",
             },
         })
         self.send_response(status)
@@ -350,6 +390,7 @@ class _Handler(BaseHTTPRequestHandler):
 
         try:
             public_b64, police_b64, plates, face_count = anonymise_image(body)
+            nsfw = nsfw_check(body)
         except Exception:
             log.exception("anonymise failed")
             self._error(500, "Internal error during anonymisation")
@@ -370,6 +411,7 @@ class _Handler(BaseHTTPRequestHandler):
             "police": police_b64,
             "plates": plate_json,
             "faces": face_count,
+            "nsfw": nsfw,
         }
 
         self.send_response(200)
