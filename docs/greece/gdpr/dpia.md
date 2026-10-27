@@ -2,7 +2,7 @@
 
 Version 3, 2026-10-27. Internal document, not published. Reviewed by three independent LLM reviewers (qwen-local, deepseek-v4-flash, gpt-oss-120b) and checked against the deployed code by Claude. Pending: owner approval and, if wanted, a lawyer's reading.
 
-**Controller:** VitalData Services, contact falcon@fixmystreets.gr. [Still to add: the legal form and postal address. The name is already on the privacy page, section 1; the address goes in `GREECE_CONTROLLER_ADDRESS` in the private configuration.]
+**Controller:** VitalData Services, Περραιβού 19, Χαϊδάρι; contact falcon@fixmystreets.gr. The privacy page shows the same. [Still to add: the legal form, once known. The volunteer team that runs the service is named on the privacy page; whether it is a joint controller (Art. 26) is to be decided.]
 **Hosting:** the operator's own server (Veeam-backed hypervisor), reached through a Cloudflare Tunnel. Mail leaves through the operator's own relay.
 **Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
 **Why a DPIA:** the service combines systematic collection of precise location, photographs of public space (faces and vehicle plates of passers-by) and optional video, and publishes part of it. That matches several criteria of the WP248 guidance and the Hellenic Data Protection Authority's list under Art. 35(4) (location and image data, and data about third parties who are not told). A DPIA is the safe course even if a single criterion would not require it.
@@ -57,7 +57,7 @@ Other points assessed:
 | Veeam backups | Owner confirmed they are in order (2026-10-27); repeat the restore check once a year |
 | `gr_voter` cookie | Done 2026-10-27: 90 days |
 | `nsfw/*.json` metadata | Done 2026-10-27: deleted after 30 days by `bin/greece/purge-originals` |
-| Controller: name VitalData Services is on the privacy page; the legal form and postal address are still to add (`GREECE_CONTROLLER_ADDRESS`, then this document and the RoPA) | Owner gives the address |
+| Controller: VitalData Services and its address are on the privacy page; add the legal form, and decide whether the volunteer team is a joint controller (Art. 26) and, if so, write the arrangement | Owner |
 | Visit statistics (Plausible) | Done 2026-10-27: the analytics script was removed from the site (the instance was run by a third party and no agreement existed). No analytics processor remains |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
