@@ -1,0 +1,99 @@
+#!/usr/bin/env perl
+# Data-subject requests (GDPR Art. 15 access / Art. 17 erasure) for fixmystreets.gr.
+#
+#   export <email>             prints everything held about the user as JSON (no password hash)
+#   erase  <email> [--commit]  anonymises the account with FixMyStreet's own anonymize_account, clears the
+#                              phone kept on the reports, deletes the user's tokens and partial registrations
+#                              (sessions expire by themselves); without --commit everything is rolled back
+#                              and only reported.
+#
+# Reports and comments stay (public interest, already sent to the municipality) but lose the name and the
+# account. The photo and video files of the reports are listed, not deleted: look at them first (they may
+# be the subject's own, or show other people).
+#
+# Runs inside the app container:
+#   docker exec -i -w /var/www/fixmystreet/fixmystreet/bin fixmystreet-fixmystreet-1 ./cron-wrapper perl - export a@b.gr \
+#       < /opt/fixmystreet/bin/greece/dsar
+
+use strict;
+use warnings;
+use utf8;
+
+use FixMyStreet;
+use FixMyStreet::DB;
+use JSON::MaybeXS;
+
+binmode STDOUT, ':encoding(UTF-8)';
+my ($cmd, $email, @opts) = @ARGV;
+die "Usage: dsar export <email> | erase <email> [--commit]\n"
+    unless $cmd && $cmd =~ /^(?:export|erase)$/ && $email && $email =~ /\@/;
+my $commit = grep { $_ eq '--commit' } @opts;
+
+my $schema = FixMyStreet::DB->schema;
+my $dbh = $schema->storage->dbh;
+my $user = $schema->resultset('User')->search(\[ 'lower(email) = ?', lc $email ])->first
+    or die "No user with that email.\n";
+my $uid = $user->id;
+
+if ($cmd eq 'export') {
+    my $rows = sub {
+        my ($sql, @bind) = @_;
+        $dbh->selectall_arrayref($sql, { Slice => {} }, @bind);
+    };
+    my $data = {
+        user => $rows->('SELECT id, name, email, email_verified, phone, phone_verified, created, last_active,
+            from_body, oidc_ids, extra FROM users WHERE id = ?', $uid)->[0],
+        problems => $rows->('SELECT id, title, detail, name, anonymous, category, state, created, confirmed, whensent,
+            latitude, longitude, postcode, extra, photo IS NOT NULL AS has_photo FROM problem WHERE user_id = ?
+            ORDER BY id', $uid),
+        comments => $rows->('SELECT id, problem_id, text, name, anonymous, state, created, photo IS NOT NULL AS has_photo
+            FROM comment WHERE user_id = ? ORDER BY id', $uid),
+        alerts => $rows->('SELECT id, alert_type, parameter, parameter2, confirmed, whensubscribed, whendisabled
+            FROM alert WHERE user_id = ? ORDER BY id', $uid),
+        tokens => $rows->(q{SELECT scope, created FROM token WHERE data->>'email' = ? OR data->>'id' = ?}, $user->email, $uid),
+        partial_user => $rows->('SELECT service, name, phone FROM partial_user WHERE lower(email) = lower(?)', $user->email),
+    };
+    print JSON::MaybeXS->new(canonical => 1, pretty => 1, convert_blessed => 1)->encode($data);
+    exit 0;
+}
+
+# erase
+my $domain = FixMyStreet->config('EMAIL_DOMAIN');
+die "Refusing: the shared anonymous account.\n" if lc $user->email eq "anonymous\@$domain";
+die "Refusing: superuser. Remove the role first, deliberately.\n" if $user->is_superuser;
+die "Refusing: staff account (" . $user->from_body . "). Remove the role first, deliberately.\n"
+    if $user->from_body || $user->user_roles->count;
+
+my $email_was = $user->email;
+my %did;
+my @files;
+$schema->txn_begin;
+{
+    my $problems = $user->problems;
+    while (my $p = $problems->next) {
+        if (defined $p->get_extra_metadata('greece_phone')) {
+            $p->unset_extra_metadata('greece_phone');
+            $p->update;
+            $did{'phone removed from reports'}++;
+        }
+        push @files, map { "photo $_ (report " . $p->id . ')' } grep { $_ } split /,/, ($p->photo // '');
+        if (my $v = $p->get_extra_metadata('greece_video')) { push @files, "video $v (report " . $p->id . ')' }
+    }
+    my $comments = $user->comments;
+    while (my $c = $comments->next) {
+        push @files, map { "photo $_ (comment " . $c->id . ')' } grep { $_ } split /,/, ($c->photo // '');
+    }
+    $did{reports} = $user->problems->count;
+    $did{comments} = $user->comments->count;
+
+    $user->anonymize_account;
+    $user->unset_extra_metadata('greece_lang');
+    $user->update;
+    $did{tokens} = $dbh->do(q{DELETE FROM token WHERE data->>'email' = ? OR data->>'id' = ?}, undef, $email_was, $uid) + 0;
+    $did{partial_user} = $dbh->do('DELETE FROM partial_user WHERE lower(email) = lower(?)', undef, $email_was) + 0;
+}
+$commit ? $schema->txn_commit : $schema->txn_rollback;
+
+print $commit ? "ERASED user $uid\n" : "DRY RUN (rolled back) for user $uid; add --commit to apply\n";
+print "  $_: $did{$_}\n" for sort keys %did;
+print "Files to look at by hand:\n", map { "  $_\n" } @files if @files;

@@ -1,0 +1,5 @@
+# FixMyStreets: daily purge of what the privacy page (§8) promises to delete: old tokens, partial
+# registrations, dead alerts, never-confirmed reports and updates (bin/greece/retention).
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-retention /etc/cron.d/
+SHELL=/bin/sh
+30 3 * * * debian cd /opt/fixmystreet && docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - < bin/greece/retention >> /var/log/fixmystreets/retention.log 2>&1

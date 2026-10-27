@@ -1,0 +1,52 @@
+#!/usr/bin/env perl
+# Retention for the data the privacy page promises to purge (§8), beyond what FixMyStreet's own
+# bin/expire-sessions already does:
+#   - tokens older than 7 days (sign-in links and codes last a day or less; unused alert-confirmation
+#     links older than a week are dead);
+#   - partial_user rows (no date column, so only when no user has that email);
+#   - alerts disabled, or never confirmed, for more than 90 days;
+#   - reports/updates never confirmed after 14 days (nobody clicked the emailed link).
+# Prints what it deletes; --dry-run only counts.
+#
+# Runs inside the app container, daily from the host's cron:
+#   docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - [--dry-run] \
+#       < /opt/fixmystreet/bin/greece/retention
+
+use strict;
+use warnings;
+
+use FixMyStreet;
+use FixMyStreet::DB;
+
+my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
+my $dbh = FixMyStreet::DB->schema->storage->dbh;
+
+my @rules = (
+    [ 'tokens older than 7 days' =>
+        q{token WHERE created < now() - interval '7 days'} ],
+    [ 'partial registrations of no user' =>
+        q{partial_user WHERE NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.email) = lower(partial_user.email))} ],
+    [ 'alerts disabled for 90 days' =>
+        q{alert WHERE whendisabled < now() - interval '90 days'} ],
+    [ 'alerts never confirmed for 90 days' =>
+        q{alert WHERE confirmed = 0 AND whendisabled IS NULL AND whensubscribed < now() - interval '90 days'} ],
+    [ 'updates never confirmed for 14 days' =>
+        q{comment WHERE state = 'unconfirmed' AND created < now() - interval '14 days'} ],
+    [ 'reports never confirmed for 14 days' =>
+        q{problem WHERE state = 'unconfirmed' AND created < now() - interval '14 days'} ],
+);
+
+my @did;
+for my $r (@rules) {
+    my ($what, $from) = @$r;
+    my $n = eval {
+        $dry_run
+            ? $dbh->selectrow_array("SELECT count(*) FROM $from")
+            : $dbh->do("DELETE FROM $from") + 0;
+    };
+    # A row another table still points at makes the DELETE fail as a whole; the others carry on.
+    if (!defined $n) { push @did, "FAILED: $what ($@)"; next }
+    push @did, "$n $what" if $n;
+}
+print scalar(localtime), ': ', (join(', ', @did) || 'nothing to delete'), ($dry_run ? ' (dry run)' : ''), "\n"
+    if @did || $dry_run;
