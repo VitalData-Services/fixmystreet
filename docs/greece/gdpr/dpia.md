@@ -4,7 +4,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 
 **Controller:** the operator of fixmystreets.gr, contact falcon@fixmystreets.gr. [Still to add: the name of the legal person or the named people behind it, and a postal address. A contact email alone does not identify the controller (Art. 13(1)(a), Art. 30(1)(a)).]
 **Hosting:** the operator's own server (Veeam-backed hypervisor), reached through a Cloudflare Tunnel. Mail leaves through the operator's own relay.
-**Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
+**Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
 **Why a DPIA:** the service combines systematic collection of precise location, photographs of public space (faces and vehicle plates of passers-by) and optional video, and publishes part of it. That matches several criteria of the WP248 guidance and the Hellenic Data Protection Authority's list under Art. 35(4) (location and image data, and data about third parties who are not told). A DPIA is the safe course even if a single criterion would not require it.
 
 ## 1. The processing
@@ -17,7 +17,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 | Name rule | A report with a photo may be anonymous. A report without a photo needs a name of at least 4 characters. Email and phone are optional; email is required only if the reporter asks to show their name. |
 | Recipients | The responsible municipality's service address (about 2 637 confirmed addresses; 26 municipalities have per-service addresses and the central address in Cc), the Hellenic Police for parking and charger categories. After sending, the receiving authority is a separate controller. |
 | Public | Point, category, description, blurred photos, date, updates. Never email or phone; the name only if the reporter chose it. Complaints to the police are shown without name and with plates in the text replaced by `***`. |
-| Retention | Reports are kept (historical statistics). Videos 180 days, unclaimed uploads 1 day, police photo copies until sent and at most 30 days, tokens 7 days, unconfirmed reports and updates 14 days, disabled or unconfirmed alerts 90 days, sessions until they expire. Mail logs rotate weekly. Contact messages and the `bounces@` mailbox: see section 4. |
+| Retention | Reports are kept (historical statistics). Videos 180 days, unclaimed uploads 1 day, police photo copies until sent and at most 30 days, tokens 7 days, unconfirmed reports and updates 14 days, disabled or unconfirmed alerts 90 days, sessions until they expire. Mail logs rotate weekly. Contact messages 90 days (rule for the operator mailbox); `bounces@` read messages 90 days (automatic). |
 | Legal bases | Forwarding and publishing a report: legitimate interest, Art. 6(1)(f) (see the balancing test below). Showing the reporter's name: consent, Art. 6(1)(a), a separate checkbox. Account, update emails, Google sign-in: Art. 6(1)(b), the service the user asks for. Email confirmation code and bot protection, statistics, security logs: Art. 6(1)(f). |
 
 ## 2. Legitimate interest: balancing test for the public map
@@ -36,7 +36,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 | 4 | Nudity or other unsuitable images are published | Low / High | NudeNet check on every JPEG; flagged reports are held for a moderator; bad-word moderation | Low |
 | 5 | Scraping or misuse of the public map | Medium / Medium | Per-endpoint rate limits in nginx (votes, OTP, video upload, address search, MapIt, form posts) and Turnstile on forms; no limit on plain map or listing views; empty municipality pages are `noindex` | Medium |
 | 6 | Weak sign-in or takeover | Low / Medium | Email confirmation code (15 minutes, 5 tries, rate limited), passwords hashed, Google sign-in verified with signed state and nonce, staff and superuser accounts need a second step (code by email), staff cannot use social sign-in | Low |
-| 7 | Dependence on Cloudflare (it carries all traffic) | Medium / Medium | HTTPS only; the tunnel avoids open inbound ports; Turnstile data limited to the challenge | Medium until the DPA is confirmed |
+| 7 | Dependence on Cloudflare (it carries all traffic) | Medium / Medium | HTTPS only; the tunnel avoids open inbound ports; Turnstile data limited to the challenge | Medium (the DPA applies, see section 4) |
 | 8 | Loss or exposure of the server or backups | Low / High | Veeam backups on the hypervisor; access limited to administrators; security headers; Docker logs rotated at 3 x 10 MB | Low |
 | 9 | Email not delivered or sent to a wrong address | Medium / Low | SPF, DKIM and DMARC (`p=reject`) on the domain; delivery tracked per report (`bin/greece/mail-delivery`); bounces read twice a day | Low |
 
@@ -46,16 +46,18 @@ Other points assessed:
 - **Cookies (ePrivacy, Greek law 3471/2006).** Login session, Turnstile and the saved report draft are strictly necessary. The `gr_voter` cookie holds a random id for 90 days (shortened from two years on 2026-10-27) so a vote counts once. It is used only for the vote the user asks for.
 - **Digital Services Act (Regulation 2022/2065).** The service hosts content from users. To check: a published point of contact, a way to notify illegal content, and the exemptions for micro and small enterprises. Not verified against the text here.
 
-## 4. Open measures
+## 4. Measures still open and decisions taken
 
-| Measure | Owner action |
+| Measure | Status |
 |---|---|
+| Cloudflare data processing terms | Done. Cloudflare's Self-Serve Subscription Agreement (updated 2025-09-12, section 6.1) incorporates the Customer DPA (v6.4) by reference, so no separate signing is needed. Checked 2026-10-27. Assumes the VitalData account is on the self-serve terms; an enterprise contract would carry its own DPA. EU Standard Contractual Clauses and the EU-US Data Privacy Framework are part of the DPA |
+| Contact messages | Decision 2026-10-27: deleted after 90 days. The messages are emails in the operator mailbox (falcon@fixmystreets.gr), so deletion is a mailbox rule, not a script |
+| `bounces@` mailbox | Decision 2026-10-27: read messages older than 90 days are deleted automatically by `bin/greece/mail-delivery --mailbox` (twice a day) |
+| Veeam backups | Owner confirmed they are in order (2026-10-27); repeat the restore check once a year |
+| `gr_voter` cookie | Done 2026-10-27: 90 days |
+| `nsfw/*.json` metadata | Done 2026-10-27: deleted after 30 days by `bin/greece/purge-originals` |
 | Add the controller's name and postal address next to the contact email (falcon@fixmystreets.gr) on the privacy page and in the RoPA | Owner |
-| Data processing terms with Cloudflare (self-serve DPA) | Owner signs |
-| Contact messages and the `bounces@` mailbox: define retention (proposal: contact messages 12 months, delivery reports 90 days) and how to erase them. They are emails, so `bin/greece/dsar` does not reach them | Owner decides |
-| Delete `nsfw/*.json` metadata older than 30 days (today `purge-originals` ignores them; the folder is empty) | Claude, small change |
 | Plausible retention period | Owner |
-| Restore test of the Veeam backups, once a year | Owner |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
 
