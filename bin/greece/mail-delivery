@@ -20,7 +20,11 @@ site's contact address, once. Nothing here changes any mail server.
 
 It runs where it can reach both: the build VM (ssh rocky@freevium1 with sudo for the log, ssh
 debian@fms for the database). Cron (conf/greece/cron.d/fixmystreets-mail-delivery, on the build VM):
-every hour. Options: --dry-run (print, change nothing), --no-mail (store, no email), --days N
+every hour. With --mailbox (twice a day) it also reads the bounces@fixmystreets.gr mailbox on infra9 (every
+address of the domain without its own mailbox lands there, so the VERP and digest senders do): a
+non-delivery report for a report's sender marks that report «bounced» (a «delayed» one «deferred»),
+each message read is marked seen (moved to cur/, nothing deleted), and falcon@ gets a list of what
+came, the other mail too. Options: --dry-run (print, change nothing), --no-mail (store, no email), --days N
 (how far back to read the relay's weekly log files; default the current and the last one).
 """
 import json
@@ -31,6 +35,8 @@ from collections import defaultdict
 from datetime import datetime
 
 RELAY = 'rocky@193.123.36.218'
+MAILHOST = 'root@192.168.201.81'           # infra9, the bounces@ mailbox
+MAILBOX = '--mailbox' in sys.argv
 FMS = 'debian@10.0.201.30'
 NOTIFY = 'falcon@fixmystreets.gr'
 DRY = '--dry-run' in sys.argv
@@ -85,13 +91,48 @@ if digest_q:
         pid, toks = row.split('|', 1)
         for tok in json.loads(toks or '[]'):
             report_q[int(pid)].extend(digest_q.get(tok, []))
+# The bounces@ mailbox: non-delivery reports that came back later (from the recipient's server).
+box_msgs, box_files = [], []
+if MAILBOX:
+    import email
+    from email import policy
+    raw = ssh(MAILHOST, 'd=$(getent passwd bounces@fixmystreets.gr | cut -d: -f6)/Maildir/new; cd "$d" && '
+              'for f in *; do [ -f "$f" ] || continue; echo "=====FMS-FILE $f"; head -c 200000 "$f"; echo; done')
+    for chunk in raw.split('=====FMS-FILE ')[1:]:
+        name, _, body = chunk.partition('\n')
+        msg = email.message_from_string(body, policy=policy.default)
+        to = (msg.get('X-Original-To') or '').strip().lower()
+        text = body
+        info = {'file': name.strip(), 'to': to, 'from': str(msg.get('From', ''))[:120], 'subject': str(msg.get('Subject', ''))[:160]}
+        fr = re.search(r'^Final-Recipient:\s*rfc822;\s*(\S+)', text, re.M | re.I)
+        st = re.search(r'^Status:\s*([\d.]+)', text, re.M | re.I)
+        ac = re.search(r'^Action:\s*(\w+)', text, re.M | re.I)
+        dg = re.search(r'^Diagnostic-Code:\s*(.+(?:\n[ \t].+)*)', text, re.M | re.I)
+        info.update({'rcpt': fr.group(1).lower() if fr else '', 'dsn': st.group(1) if st else '',
+                     'action': ac.group(1).lower() if ac else '', 'said': re.sub(r'\s+', ' ', dg.group(1))[:300] if dg else ''})
+        r = re.match(r'fms-report-(\d+)-[0-9a-z]+@', to)
+        d = re.match(r'fms-digest-([0-9a-z]+)@', to)
+        info['report'] = int(r.group(1)) if r else None
+        info['digest'] = d.group(1) if d else None
+        box_msgs.append(info)
+        box_files.append(info['file'])
+    for m in box_msgs:
+        if m['digest']:
+            rows = psql("SELECT id FROM problem WHERE extra->'greece_digest_env' ? '%s';" % m['digest'].replace("'", ''))
+            m['reports'] = [int(x) for x in rows.split()]
+        else:
+            m['reports'] = [m['report']] if m['report'] else []
+        for pid in m['reports']:
+            report_q.setdefault(pid, [])
+
 if not report_q:
     print('no report emails in the relay log')
-    sys.exit(0)
+    if not box_msgs:
+        sys.exit(0)
 
 current = {}
-for row in psql("SELECT id, coalesce(extra->'greece_delivery', 'null') FROM problem WHERE id IN (%s);"
-                % ','.join(str(i) for i in report_q)).splitlines():
+for row in ([] if not report_q else psql("SELECT id, coalesce(extra->'greece_delivery', 'null') FROM problem WHERE id IN (%s);"
+                % ','.join(str(i) for i in report_q)).splitlines()):
     pid, val = row.split('|', 1)
     current[int(pid)] = json.loads(val)
 
@@ -106,6 +147,12 @@ for pid, qids in sorted(report_q.items()):
             # A final answer for a recipient wins over a «deferred» before or after it.
             if a['to'] not in last or a['status'] in FINAL or last[a['to']]['status'] not in FINAL:
                 last[a['to']] = a
+    for m in box_msgs:
+        if pid in m.get('reports', []) and m['rcpt']:
+            status = 'deferred' if m['action'] == 'delayed' else 'bounced'
+            if m['rcpt'] not in last or last[m['rcpt']]['status'] == 'sent' or status == 'bounced':
+                last[m['rcpt']] = {'to': m['rcpt'], 'status': status, 'dsn': m['dsn'], 'said': m['said'] or m['subject'],
+                                   'host': '(non-delivery report)', 'at': m['file'].split('.')[0]}
     if not last:
         continue
     rcpts = sorted(last.values(), key=lambda a: a['to'])
@@ -120,7 +167,9 @@ for pid, qids in sorted(report_q.items()):
 
 for pid, d in updates.items():
     print(pid, d['state'], ', '.join(f"{a['to']}: {a['status']} {a['dsn']}" for a in d['rcpts']))
-if DRY or not updates:
+if DRY:
+    for m in box_msgs:
+        print('mailbox:', m['file'], m['to'], m['rcpt'], m['dsn'], m['subject'][:60])
     sys.exit(0)
 
 sql = ['BEGIN;']
@@ -128,7 +177,8 @@ for pid, d in updates.items():
     j = json.dumps(d, ensure_ascii=False).replace("'", "''")
     sql.append(f"UPDATE problem SET extra = jsonb_set(coalesce(extra, '{{}}'::jsonb), '{{greece_delivery}}', '{j}'::jsonb) WHERE id = {pid};")
 sql.append('COMMIT;')
-psql('\n'.join(sql) + '\n')
+if updates:
+    psql('\n'.join(sql) + '\n')
 
 if newly_bad and not NO_MAIL:
     lines = ['Subject: FixMyStreets: αναφορές που δεν παραδόθηκαν', f'To: {NOTIFY}', 'From: noreply@fixmystreets.gr',
@@ -143,3 +193,23 @@ if newly_bad and not NO_MAIL:
     lines.append('Αν η διεύθυνση του φορέα είναι λάθος, διόρθωσέ την στο admin (κατηγορίες του φορέα) και ξαναστείλε την αναφορά.')
     ssh(FMS, f'/usr/sbin/sendmail -f noreply@fixmystreets.gr {NOTIFY}', '\n'.join(lines) + '\n')
     print('notified', NOTIFY, 'of', len(newly_bad))
+
+# The mailbox: mark what was read as seen, and tell the contact address what came.
+if box_files:
+    names = ' '.join("'%s'" % f.replace("'", '') for f in box_files)
+    ssh(MAILHOST, 'd=$(getent passwd bounces@fixmystreets.gr | cut -d: -f6)/Maildir; cd "$d/new" && '
+        'for f in %s; do [ -f "$f" ] && mv "$f" "../cur/$f:2,S"; done; true' % names)
+    print('mailbox: %d message(s) read' % len(box_files))
+    if not NO_MAIL:
+        lines = ['Subject: FixMyStreets: το γραμματοκιβώτιο bounces@ (%d νέα)' % len(box_msgs), f'To: {NOTIFY}',
+                 'From: noreply@fixmystreets.gr', 'Content-Type: text/plain; charset=utf-8', '']
+        for m in box_msgs:
+            who = ('αναφορά id ' + ', '.join(map(str, m['reports']))) if m['reports'] else 'όχι αναφοράς'
+            lines.append(f"- {m['subject']} ({who})")
+            if m['rcpt']:
+                lines.append(f"    {m['rcpt']}: {m['action'] or 'failed'} {m['dsn']} {m['said']}")
+            else:
+                lines.append(f"    από: {m['from']}, προς: {m['to']}")
+        lines.append('')
+        lines.append('Τα μηνύματα είναι στο bounces@fixmystreets.gr (σημειωμένα ως διαβασμένα).')
+        ssh(FMS, f'/usr/sbin/sendmail -f noreply@fixmystreets.gr {NOTIFY}', '\n'.join(lines) + '\n')
