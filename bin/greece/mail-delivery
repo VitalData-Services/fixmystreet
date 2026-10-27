@@ -19,15 +19,17 @@ admin/reports/edit.html). A report that turns «bounced» or «deferred» is lis
 site's contact address, once. Nothing here changes any mail server.
 
 It runs on the fms VM, so it moves with it: the database and sendmail are local; the relay's log is read
-by ssh (RELAY, sudo for /var/log/maillog) and the bounces@ mailbox by ssh (MAILHOST), both with the key
-~/.ssh/fms-mail of the user that runs it (authorise its .pub on those two hosts). Cron
+by ssh (RELAY, sudo for /var/log/maillog) with the key ~/.ssh/fms-mail of the user that runs it (authorise
+its .pub there), and the bounces@ mailbox over IMAPS on the mail host's public name (IMAP_HOST; the
+mailbox's user and password in ~/.fms-imap). Cron
 (conf/greece/cron.d/fixmystreets-mail-delivery): every hour. With --mailbox (twice a day) it also reads the bounces@fixmystreets.gr mailbox on infra9 (every
 address of the domain without its own mailbox lands there, so the VERP and digest senders do): a
 non-delivery report for a report's sender marks that report «bounced» (a «delayed» one «deferred»),
-each message read is marked seen (moved to cur/, nothing deleted), and falcon@ gets a list of what
+each message read is marked seen (nothing deleted), and falcon@ gets a list of what
 came, the other mail too. Options: --dry-run (print, change nothing), --no-mail (store, no email), --days N
 (how far back to read the relay's weekly log files; default the current and the last one).
 """
+import imaplib
 import json
 import os
 import re
@@ -37,7 +39,8 @@ from collections import defaultdict
 from datetime import datetime
 
 RELAY = os.environ.get('FMS_RELAY', 'rocky@193.123.36.218')
-MAILHOST = os.environ.get('FMS_MAILHOST', 'root@192.168.201.81')   # infra9, the bounces@ mailbox
+IMAP_HOST = os.environ.get('FMS_IMAP_HOST', 'infra.vitaldata.gr')   # infra9's public IMAP, the bounces@ mailbox
+IMAP_AUTH = os.path.expanduser('~/.fms-imap')                     # two lines: user, password (mode 600)
 MAILBOX = '--mailbox' in sys.argv
 FMS = 'debian@10.0.201.30'
 NOTIFY = 'falcon@fixmystreets.gr'
@@ -59,6 +62,32 @@ def run_fms(cmd, data=None):
     """Runs a shell command on the fms VM: here when the script is on it, else by ssh."""
     argv = ['sh', '-c', cmd] if on_fms() else ['ssh', '-o', 'BatchMode=yes', FMS, cmd]
     return subprocess.run(argv, input=data, capture_output=True, text=True, timeout=120, check=True).stdout
+
+
+def imap_open():
+    user, password = open(IMAP_AUTH).read().split(chr(10))[:2]
+    conn = imaplib.IMAP4_SSL(IMAP_HOST, timeout=60)
+    conn.login(user, password)
+    conn.select('INBOX')
+    return conn
+
+
+def fetch_unseen():
+    """The unseen messages of the bounces@ mailbox as (uid, text); none is marked seen here."""
+    conn = imap_open()
+    out = []
+    for uid in conn.uid('search', None, 'UNSEEN')[1][0].split():
+        raw = conn.uid('fetch', uid, '(BODY.PEEK[]<0.200000>)')[1][0][1]
+        out.append((uid.decode(), raw.decode('utf-8', 'replace')))
+    conn.logout()
+    return out
+
+
+def mark_seen(uids):
+    conn = imap_open()
+    for uid in uids:
+        conn.uid('store', uid, '+FLAGS', r'(\Seen)')
+    conn.logout()
 
 
 def ssh(host, cmd, data=None):
@@ -114,10 +143,7 @@ box_msgs, box_files = [], []
 if MAILBOX:
     import email
     from email import policy
-    raw = ssh(MAILHOST, 'd=$(getent passwd bounces@fixmystreets.gr | cut -d: -f6)/Maildir/new; cd "$d" && '
-              'for f in *; do [ -f "$f" ] || continue; echo "=====FMS-FILE $f"; head -c 200000 "$f"; echo; done')
-    for chunk in raw.split('=====FMS-FILE ')[1:]:
-        name, _, body = chunk.partition('\n')
+    for name, body in fetch_unseen():
         msg = email.message_from_string(body, policy=policy.default)
         to = (msg.get('X-Original-To') or '').strip().lower()
         text = body
@@ -214,9 +240,7 @@ if newly_bad and not NO_MAIL:
 
 # The mailbox: mark what was read as seen, and tell the contact address what came.
 if box_files:
-    names = ' '.join("'%s'" % f.replace("'", '') for f in box_files)
-    ssh(MAILHOST, 'd=$(getent passwd bounces@fixmystreets.gr | cut -d: -f6)/Maildir; cd "$d/new" && '
-        'for f in %s; do [ -f "$f" ] && mv "$f" "../cur/$f:2,S"; done; true' % names)
+    mark_seen(box_files)
     print('mailbox: %d message(s) read' % len(box_files))
     if not NO_MAIL:
         lines = ['Subject: FixMyStreets: το γραμματοκιβώτιο bounces@ (%d νέα)' % len(box_msgs), f'To: {NOTIFY}',
