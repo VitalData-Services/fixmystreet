@@ -2,7 +2,7 @@
 
 Version 3, 2026-10-27. Internal document, not published. Reviewed by three independent LLM reviewers (qwen-local, deepseek-v4-flash, gpt-oss-120b) and checked against the deployed code by Claude. Pending: owner approval and, if wanted, a lawyer's reading.
 
-**Controller:** [owner to complete: the legal person or named group, postal address, contact email. Art. 30(1)(a) and Art. 13(1)(a) need an identifiable controller; the privacy page currently says only "a team of volunteers".]
+**Controller:** the operator of fixmystreets.gr, contact falcon@fixmystreets.gr. [Still to add: the name of the legal person or the named people behind it, and a postal address. A contact email alone does not identify the controller (Art. 13(1)(a), Art. 30(1)(a)).]
 **Hosting:** the operator's own server (Veeam-backed hypervisor), reached through a Cloudflare Tunnel. Mail leaves through the operator's own relay.
 **Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
 **Why a DPIA:** the service combines systematic collection of precise location, photographs of public space (faces and vehicle plates of passers-by) and optional video, and publishes part of it. That matches several criteria of the WP248 guidance and the Hellenic Data Protection Authority's list under Art. 35(4) (location and image data, and data about third parties who are not told). A DPIA is the safe course even if a single criterion would not require it.
@@ -50,7 +50,7 @@ Other points assessed:
 
 | Measure | Owner action |
 |---|---|
-| Name the controller (legal person, address, contact) on the privacy page and in the RoPA | Owner |
+| Add the controller's name and postal address next to the contact email (falcon@fixmystreets.gr) on the privacy page and in the RoPA | Owner |
 | Data processing terms with Cloudflare (self-serve DPA) | Owner signs |
 | Contact messages and the `bounces@` mailbox: define retention (proposal: contact messages 12 months, delivery reports 90 days) and how to erase them. They are emails, so `bin/greece/dsar` does not reach them | Owner decides |
 | Delete `nsfw/*.json` metadata older than 30 days (today `purge-originals` ignores them; the folder is empty) | Claude, small change |

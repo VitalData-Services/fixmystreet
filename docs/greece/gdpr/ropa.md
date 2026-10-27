@@ -2,7 +2,7 @@
 
 Version 3, 2026-10-27. Internal document, not published. Give it to the Hellenic Data Protection Authority on request (Art. 30(4)). Checked against the deployed code and three independent reviews.
 
-**Controller (Art. 30(1)(a)):** [owner to complete: name of the legal person or group, postal address, contact email, and a DPO or contact point if one is appointed].
+**Controller (Art. 30(1)(a)):** the operator of fixmystreets.gr, contact falcon@fixmystreets.gr. [Still to add: name of the legal person or the named people, postal address, and a DPO or contact point if one is appointed.]
 **Joint or separate controllers:** a municipality or the Hellenic Police becomes a separate controller of a report once it receives it.
 **Processors:** Cloudflare (tunnel, CDN, Turnstile). Own infrastructure: server on a Veeam-backed hypervisor, mail relay `frv-ams.vitaldata.gr`, mail server with the `bounces@` mailbox.
 **Transfers outside the EEA:** Cloudflare may process data outside the EEA (DPA to be confirmed). Nominatim (OpenStreetMap Foundation, United Kingdom) receives coordinates; the United Kingdom has an EU adequacy decision, to be rechecked on its expiry. Photon (Komoot, Germany) and Google (sign-in only) as described.
