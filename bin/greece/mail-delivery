@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Did each report's email reach the service? (owner, 2026-10-27: a ✓ on each report whose email went
+without SMTP errors, and in the admin.)
+
+Report emails leave the fms VM's postfix for our relay (freevium1), which hands them to the
+recipient's mail server. The relay's log has, per message, the envelope sender and the recipient
+server's answer. The envelope sender names the report: fms-report-<id>-<hash>@ (FixMyStreet's VERP)
+or, for the municipalities' digest, fms-digest-<token>@ (bin/greece/send-digest keeps the token on
+each report it carried, extra greece_digest_env). So this reads the relay's log, groups the answers
+by report, and stores them on the report, extra greece_delivery:
+
+    {"state": "delivered" | "bounced" | "deferred", "checked": "...", "rcpts": [
+        {"to": ..., "status": "sent" | "bounced" | "deferred" | "expired", "dsn": "2.0.0",
+         "said": "250 2.0.0 OK ...", "host": "mx.example.gr", "at": "Oct 26 23:40:06"}]}
+
+«delivered» only when every recipient's server said 2xx. The report page shows ✓ for that, and the
+admin ✓ or ⚠ (templates/web/greece/report/_main_sent_info.html, admin/problem_row.html,
+admin/reports/edit.html). A report that turns «bounced» or «deferred» is listed in an email to the
+site's contact address, once. Nothing here changes any mail server.
+
+It runs where it can reach both: the build VM (ssh rocky@freevium1 with sudo for the log, ssh
+debian@fms for the database). Cron (conf/greece/cron.d/fixmystreets-mail-delivery, on the build VM):
+every hour. Options: --dry-run (print, change nothing), --no-mail (store, no email), --days N
+(how far back to read the relay's weekly log files; default the current and the last one).
+"""
+import json
+import re
+import subprocess
+import sys
+from collections import defaultdict
+from datetime import datetime
+
+RELAY = 'rocky@193.123.36.218'
+FMS = 'debian@10.0.201.30'
+NOTIFY = 'falcon@fixmystreets.gr'
+DRY = '--dry-run' in sys.argv
+NO_MAIL = '--no-mail' in sys.argv     # store, but do not email the contact address
+FILES = 2
+if '--days' in sys.argv:
+    FILES = max(1, int(sys.argv[sys.argv.index('--days') + 1]) // 7 + 1)
+
+
+def ssh(host, cmd, data=None):
+    return subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', host, cmd],
+                          input=data, capture_output=True, text=True, timeout=120, check=True).stdout
+
+
+def psql(sql):
+    return ssh(FMS, 'docker exec -i fixmystreet-postgres-1 psql -U postgres -d fixmystreet -At -v ON_ERROR_STOP=1', sql)
+
+
+# The relay's log: the current file and the newest rotated ones (weekly).
+log = ssh(RELAY, "sudo -n sh -c 'ls -1t /var/log/maillog-* 2>/dev/null | head -%d | tac | xargs -r cat; cat /var/log/maillog' "
+          "| grep -E 'postfix/(qmgr|smtp|error|local|lmtp)\\['" % (FILES - 1))
+
+LINE = re.compile(r'^(\w{3}\s+\d+ \d\d:\d\d:\d\d) \S+ postfix/(\w+)\[\d+\]: ([0-9A-F]{8,}): (.*)$')
+sender, answers = {}, defaultdict(list)
+for line in log.splitlines():
+    m = LINE.match(line)
+    if not m:
+        continue
+    at, prog, qid, rest = m.groups()
+    f = re.match(r'from=<([^>]*)>', rest)
+    if f and prog == 'qmgr':
+        sender[qid] = f.group(1).lower()
+        continue
+    t = re.match(r'to=<([^>]*)>, (?:orig_to=<[^>]*>, )?relay=([^,]*), .*?dsn=([\d.]+), status=(\w+) \((.*)\)$', rest)
+    if t:
+        to, relay, dsn, status, said = t.groups()
+        answers[qid].append({'to': to.lower(), 'status': status, 'dsn': dsn, 'said': said[:300],
+                             'host': relay.split('[')[0], 'at': at})
+
+# Envelope sender → report ids.
+report_q, digest_q = defaultdict(list), defaultdict(list)
+for qid, s in sender.items():
+    r = re.match(r'fms-report-(\d+)-[0-9a-f]+@', s)
+    d = re.match(r'fms-digest-([0-9a-z]+)@', s)
+    if r:
+        report_q[int(r.group(1))].append(qid)
+    elif d:
+        digest_q[d.group(1)].append(qid)
+if digest_q:
+    rows = psql("SELECT id, extra->'greece_digest_env' FROM problem WHERE extra ? 'greece_digest_env';")
+    for row in rows.splitlines():
+        pid, toks = row.split('|', 1)
+        for tok in json.loads(toks or '[]'):
+            report_q[int(pid)].extend(digest_q.get(tok, []))
+if not report_q:
+    print('no report emails in the relay log')
+    sys.exit(0)
+
+current = {}
+for row in psql("SELECT id, coalesce(extra->'greece_delivery', 'null') FROM problem WHERE id IN (%s);"
+                % ','.join(str(i) for i in report_q)).splitlines():
+    pid, val = row.split('|', 1)
+    current[int(pid)] = json.loads(val)
+
+FINAL = {'sent', 'bounced', 'expired'}
+updates, newly_bad = {}, []
+for pid, qids in sorted(report_q.items()):
+    if pid not in current:
+        continue                      # not in this database (deleted, or another site)
+    last = {}
+    for qid in qids:
+        for a in answers.get(qid, []):
+            # A final answer for a recipient wins over a «deferred» before or after it.
+            if a['to'] not in last or a['status'] in FINAL or last[a['to']]['status'] not in FINAL:
+                last[a['to']] = a
+    if not last:
+        continue
+    rcpts = sorted(last.values(), key=lambda a: a['to'])
+    state = ('delivered' if all(a['status'] == 'sent' for a in rcpts)
+             else 'bounced' if any(a['status'] in ('bounced', 'expired') for a in rcpts) else 'deferred')
+    old = current.get(pid) or {}
+    if old.get('state') == state and old.get('rcpts') == rcpts:
+        continue
+    updates[pid] = {'state': state, 'checked': datetime.now().strftime('%Y-%m-%d %H:%M'), 'rcpts': rcpts}
+    if state != 'delivered' and old.get('state') != state:
+        newly_bad.append((pid, state, rcpts))
+
+for pid, d in updates.items():
+    print(pid, d['state'], ', '.join(f"{a['to']}: {a['status']} {a['dsn']}" for a in d['rcpts']))
+if DRY or not updates:
+    sys.exit(0)
+
+sql = ['BEGIN;']
+for pid, d in updates.items():
+    j = json.dumps(d, ensure_ascii=False).replace("'", "''")
+    sql.append(f"UPDATE problem SET extra = jsonb_set(coalesce(extra, '{{}}'::jsonb), '{{greece_delivery}}', '{j}'::jsonb) WHERE id = {pid};")
+sql.append('COMMIT;')
+psql('\n'.join(sql) + '\n')
+
+if newly_bad and not NO_MAIL:
+    lines = ['Subject: FixMyStreets: αναφορές που δεν παραδόθηκαν', f'To: {NOTIFY}', 'From: noreply@fixmystreets.gr',
+             'Content-Type: text/plain; charset=utf-8', '',
+             'Ο relay δεν παρέδωσε το email αυτών των αναφορών (bin/greece/mail-delivery):', '']
+    for pid, state, rcpts in newly_bad:
+        lines.append(f'Αναφορά id {pid}: {"επιστράφηκε" if state == "bounced" else "σε αναμονή (deferred)"} — https://fixmystreets.gr/admin/report_edit/{pid}')
+        for a in rcpts:
+            if a['status'] != 'sent':
+                lines.append(f"    {a['to']}: {a['status']} {a['dsn']} — {a['said']}")
+        lines.append('')
+    lines.append('Αν η διεύθυνση του φορέα είναι λάθος, διόρθωσέ την στο admin (κατηγορίες του φορέα) και ξαναστείλε την αναφορά.')
+    ssh(FMS, f'/usr/sbin/sendmail -f noreply@fixmystreets.gr {NOTIFY}', '\n'.join(lines) + '\n')
+    print('notified', NOTIFY, 'of', len(newly_bad))

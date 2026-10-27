@@ -1,0 +1,7 @@
+# FixMyStreets: whether each report's email reached the service (bin/greece/mail-delivery): reads our
+# relay's log (freevium1) and stores ✓/⚠ on the reports; emails falcon@ about new failures.
+# Runs on the BUILD VM (it reaches both the relay and the fms VM by ssh), from a copy of the script.
+# Install (build VM): sudo install -m 755 bin/greece/mail-delivery /data/ci/fms-mail-delivery
+#                     sudo install -m 644 conf/greece/cron.d/fixmystreets-mail-delivery /etc/cron.d/
+SHELL=/bin/sh
+20 * * * * root /data/ci/fms-mail-delivery >> /var/log/fms-mail-delivery.log 2>&1
