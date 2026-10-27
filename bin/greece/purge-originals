@@ -42,5 +42,16 @@ for my $file ($dir->children(qr/\A[0-9a-f]{40}\.jpeg\z/)) {
     print "$name: $why", ($dry_run ? ' (dry run)' : ''), "\n";
     $file->remove unless $dry_run;
 }
+# The nudity-check results (nsfw/<photo>.json) go after 30 days too.
+my $nsfw = $dir->child('nsfw');
+if ($nsfw->is_dir) {
+    for my $file ($nsfw->children(qr/\.json\z/)) {
+        next unless $now - $file->stat->mtime > 30 * 86400;
+        $done{'nsfw result older than 30 days'}++;
+        print $file->basename, ": nsfw result older than 30 days", ($dry_run ? ' (dry run)' : ''), "
+";
+        $file->remove unless $dry_run;
+    }
+}
 print scalar(localtime), ': ', (join(', ', map { "$done{$_} $_" } sort keys %done) || 'nothing to delete'),
     ($dry_run ? ' (dry run)' : ''), "\n" if %done || $dry_run;

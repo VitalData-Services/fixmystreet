@@ -1,0 +1,35 @@
+# Record of processing activities (Art. 30 GDPR): fixmystreets.gr
+
+Version 3, 2026-10-27. Internal document, not published. Give it to the Hellenic Data Protection Authority on request (Art. 30(4)). Checked against the deployed code and three independent reviews.
+
+**Controller (Art. 30(1)(a)):** [owner to complete: name of the legal person or group, postal address, contact email, and a DPO or contact point if one is appointed].
+**Joint or separate controllers:** a municipality or the Hellenic Police becomes a separate controller of a report once it receives it.
+**Processors:** Cloudflare (tunnel, CDN, Turnstile). Own infrastructure: server on a Veeam-backed hypervisor, mail relay `frv-ams.vitaldata.gr`, mail server with the `bounces@` mailbox.
+**Transfers outside the EEA:** Cloudflare may process data outside the EEA (DPA to be confirmed). Nominatim (OpenStreetMap Foundation, United Kingdom) receives coordinates; the United Kingdom has an EU adequacy decision, to be rechecked on its expiry. Photon (Komoot, Germany) and Google (sign-in only) as described.
+**Technical and organisational measures (general, Art. 30(1)(g)):** HTTPS only; Cloudflare Tunnel; administrator-only server and database access; password hashes; staff second step by email code; security headers; rate limits; Turnstile on forms; blurred photos; automatic purges (`bin/greece/purge-originals`, `bin/greece/retention`); Docker logs rotated at 3 x 10 MB; Veeam backups; per-report delivery tracking; `bin/greece/dsar` for access and erasure.
+
+Special categories (Art. 9): none are requested. Photos may show people by accident; see the DPIA section 3.
+
+| # | Activity | Purpose and legal basis | Data subjects and data | Recipients | Retention | Notes |
+|---|---|---|---|---|---|---|
+| 1 | Receiving a report | Route a problem to the responsible service. Art. 6(1)(f) (balancing test in the DPIA) | Reporters; passers-by in photos. Point and address, category and answers, description, photos, optional video id, optional name, email, phone. A report without a photo needs a name | Municipality or police by email; the municipality's central address in Cc for routed categories; operator | Kept for statistics. Police photo copy until sent, at most 30 days. The full description of a complaint is kept in `problem.extra` with the report | The Greek field `pinakida` (plate) is saved with the report when the reporter accepts the OCR text |
+| 2 | Publication on the public map | Transparency about public-space problems. Art. 6(1)(f). Showing the name: Art. 6(1)(a), separate checkbox | Same as 1, public part only | Anyone, including search engines and scrapers | As the report. Hidden on request | Plates in text replaced by `***`; police complaints without name; blurred photos |
+| 3 | Email confirmation code | Prove the address belongs to the reporter. Art. 6(1)(b) and (f) | Reporters with an email. Email, code hash, tries, time | The reporter (one email) | Code valid 15 minutes, 5 tries, then the token is deleted; tokens purged after 7 days | Rate limited per email, per session and in nginx |
+| 4 | Accounts and Google sign-in | Let people manage reports and alerts. Art. 6(1)(b) | Users. Email, name, phone, password hash, Google identifier, last active | None; Google receives the sign-in request | Until the user asks for erasure. Unverified, unused accounts: to be defined | Google only; staff and superusers cannot use it |
+| 5 | Staff and administrator accounts | Let municipal, police and operator staff handle reports. Art. 6(1)(f) | Staff. Name, email, body, role, second-step code, admin log entries | Operator | While the role lasts; admin log: to be defined | Second step by email code. Admin log keeps who changed what |
+| 6 | Contact form | Answer questions and requests. Art. 6(1)(f) | Senders. Name, email, optional phone, message, IP and browser (included in the email) | Operator mailbox | To be defined (proposal 12 months). Nothing is stored in the database, so `dsar` does not reach it | Turnstile for anonymous senders |
+| 7 | Video upload | Let the reporter attach a short clip. Art. 6(1)(a) (the reporter chooses to upload) | Reporters, passers-by. Video up to 45 s transcoded to 720p without metadata, upload IP | Staff of the receiving body, inside the platform. Not published, not emailed | 180 days; unclaimed uploads 1 day | Ids are 128 random bits; access checked per user |
+| 8 | Bot protection (Turnstile) | Stop automated abuse. Art. 6(1)(f) | All visitors who reach a form. Challenge token | Cloudflare (processor) | Cloudflare's own | DPA to be confirmed |
+| 9 | Visit statistics (Plausible) | Aggregate counts. Art. 6(1)(f) | All visitors. Page, country, device, no cookie, no IP stored | Operator's own Plausible | Not yet defined | |
+| 10 | Address search (Photon) | Find an address. Art. 6(1)(f) | Users who type an address. The text only, through nginx | Komoot | Not kept by us | Visitor IP and cookies are not forwarded |
+| 11 | Reverse geocoding (Nominatim) | Turn a point into an address. Art. 6(1)(f) | Reporters. Coordinates only, from the server | OpenStreetMap Foundation | Not kept by us | |
+| 12 | Sending email | Send report letters, codes, links, alerts, moderation notices. Art. 6(1)(b) and (f) | Reporters, authority staff, operators. Addresses and the content of the letter | Receiving mail servers | The relay log keeps addresses and status, rotated weekly. Letter content is not kept. Delivery status is stored on the report. The `bounces@` mailbox: to be defined (proposal 90 days) | SPF, DKIM, DMARC; bounces read twice a day |
+| 13 | Votes on reports | Show how many people share a problem. Art. 6(1)(f) | Visitors. Random id in the `gr_voter` cookie (2 years), hashed in the database | Operator | As the report | Cookie lifetime under review |
+| 14 | Alerts | Tell subscribers about updates. Art. 6(1)(b) | Subscribers. Email, area or report | The subscriber | Disabled or unconfirmed alerts purged after 90 days. Email only; RSS was removed | Turnstile for anonymous subscribers |
+| 15 | Server and access logs | Security and fixing errors. Art. 6(1)(f) | All visitors. IP, browser, time, request | Operator | nginx and application logs rotated at 3 x 10 MB per container | No separate analytics |
+| 16 | Nudity and bad-word moderation | Keep unsuitable content off the map. Art. 6(1)(f) | Reporters. Detection result per photo, a flag on the report | Moderators | The flag stays with the report. The detection files in `nsfw/` are not yet purged (proposal 30 days) | Automatic holding, human decision |
+| 17 | Data subject requests | Meet Art. 15 to 21. Art. 6(1)(c) | Requesters. The request and the answer | Operator | The request and answer, proposal 3 years | `bin/greece/dsar export` and `erase`; contact messages and the mail logs need manual steps |
+
+## Counts used in the DPIA (2026-10-26 snapshot, to recheck before quoting)
+
+Confirmed municipal contact addresses: 2 637 (332 inactive and 362 deleted ones are not used). Email-verified users: 7. Reports: all earlier test reports were deleted on 2026-10-27.
