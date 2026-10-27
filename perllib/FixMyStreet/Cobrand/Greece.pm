@@ -413,9 +413,25 @@ sub greece_digest_next {
     my @bodies = FixMyStreet::DB->resultset('Body')->search({ id => \@ids })->all;
     return unless @bodies && !grep { ($_->send_method // '') ne 'Noop' || ($_->extra || {})->{greece_police} } @bodies;
     my $now = DateTime->now(time_zone => 'Europe/Athens');
-    my ($next) = grep { $_ > $now->hour } 7, 13, 19;
+    my ($next) = grep { $_ > $now->hour } 1, 7, 13, 19;
     return sprintf('%02d:00', $next) if $next;
-    return $self->greece_t('αύριο', 'tomorrow') . ' 07:00';
+    return $self->greece_t('αύριο', 'tomorrow') . ' 01:00';
+}
+
+# A municipality's report waits for an admin's approval (/admin/greece/approve) before the digest sends it
+# (extra greece_approved); the police's complaints do not wait.
+sub greece_digest_body_ids {
+    my $self = shift;
+    return $self->{greece_digest_body_ids} //= { map { $_->id => 1 }
+        grep { !(($_->extra || {})->{greece_police}) }
+        FixMyStreet::DB->resultset('Body')->search({ deleted => 0, send_method => 'Noop' })->all };
+}
+sub greece_needs_approval {
+    my ($self, $report) = @_;
+    return 0 if !$report || $report->whensent || !$report->bodies_str || $report->get_extra_metadata('greece_approved');
+    my @ids = grep { /^\d+$/ } split /,/, $report->bodies_str;
+    my $ok = $self->greece_digest_body_ids;
+    return @ids && !grep({ !$ok->{$_} } @ids) ? 1 : 0;
 }
 
 # Whether the municipalities' digest is on (any municipality with send_method Noop), for the FAQ.

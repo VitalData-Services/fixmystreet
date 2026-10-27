@@ -62,7 +62,9 @@ services:
       # Police complaints near a spot, as a count only, for the report form's notice (GET /greece/nearby-private).
       - ./perllib/FixMyStreet/App/Controller/GreeceNearby.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceNearby.pm:ro
       # A report's page at its number, /report/20261026-03 (nginx rewrites to /greece/report-ref/…).
-      - ./perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:ro
+      - ./perllib/FixMyStreet/App/Controller/GreeceReportRef.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceReportRef.pm
+      # An admin approves the municipalities' reports before the digest sends them (/admin/greece/approve).
+      - ./perllib/FixMyStreet/App/Controller/GreeceApprove.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceApprove.pm:ro
       # A video with a report (POST /greece/video/…), kept on the videos volume; never published.
       # The volume belongs to uid 1000 (fms here, fmsvideo in the video service): once, after it is
       # created: docker compose exec -u root fixmystreet chown 1000:1000 /var/lib/fms-videos

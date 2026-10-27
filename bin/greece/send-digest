@@ -41,7 +41,15 @@ use Digest::SHA ();
 
 binmode STDOUT, ':utf8';
 
-our @HOURS = (7, 13, 19);    # Europe/Athens
+our @HOURS = (1, 7, 13, 19);    # Europe/Athens
+
+sub notify_waiting {
+    my ($schema, $cobrand, $count) = @_;
+    my $env = 'fms-approval@' . (FixMyStreet->config('EMAIL_DOMAIN') || 'fixmystreets.gr');
+    FixMyStreet::Email::send_cron($schema, 'approval-pending.txt', {
+        count => $count, cobrand => $cobrand, approve_url => $cobrand->base_url . '/admin/greece/approve',
+    }, { To => [ [ $cobrand->contact_email, $cobrand->contact_name ] ] }, $env, 0, $cobrand, 'el');
+}
 
 sub main {
     my @args = @_;
@@ -70,6 +78,11 @@ sub main {
         whensent => undef,
         bodies_str => { '!=', undef },
     }, { order_by => [ 'confirmed', 'id' ] })->all;
+    # A municipality's report waits for an admin's approval (/admin/greece/approve); the contact address is told.
+    my @waiting = grep { $cobrand->greece_needs_approval($_) } @reports;
+    @reports = grep { !$cobrand->greece_needs_approval($_) } @reports;
+    print scalar(@waiting), " report(s) wait for approval\n" if @waiting;
+    notify_waiting($schema, $cobrand, scalar @waiting) if @waiting && !$opt{'dry-run'} && !$opt{to};
 
     # address => { bodies => { name => 1 }, items => [ { report, ... } ] }
     my (%group, %pending);
