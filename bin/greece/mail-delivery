@@ -18,9 +18,10 @@ admin ✓ or ⚠ (templates/web/greece/report/_main_sent_info.html, admin/proble
 admin/reports/edit.html). A report that turns «bounced» or «deferred» is listed in an email to the
 site's contact address, once. Nothing here changes any mail server.
 
-It runs where it can reach both: the build VM (ssh rocky@freevium1 with sudo for the log, ssh
-debian@fms for the database). Cron (conf/greece/cron.d/fixmystreets-mail-delivery, on the build VM):
-every hour. With --mailbox (twice a day) it also reads the bounces@fixmystreets.gr mailbox on infra9 (every
+It runs on the fms VM, so it moves with it: the database and sendmail are local; the relay's log is read
+by ssh (RELAY, sudo for /var/log/maillog) and the bounces@ mailbox by ssh (MAILHOST), both with the key
+~/.ssh/fms-mail of the user that runs it (authorise its .pub on those two hosts). Cron
+(conf/greece/cron.d/fixmystreets-mail-delivery): every hour. With --mailbox (twice a day) it also reads the bounces@fixmystreets.gr mailbox on infra9 (every
 address of the domain without its own mailbox lands there, so the VERP and digest senders do): a
 non-delivery report for a report's sender marks that report «bounced» (a «delayed» one «deferred»),
 each message read is marked seen (moved to cur/, nothing deleted), and falcon@ gets a list of what
@@ -28,14 +29,15 @@ came, the other mail too. Options: --dry-run (print, change nothing), --no-mail 
 (how far back to read the relay's weekly log files; default the current and the last one).
 """
 import json
+import os
 import re
 import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime
 
-RELAY = 'rocky@193.123.36.218'
-MAILHOST = 'root@192.168.201.81'           # infra9, the bounces@ mailbox
+RELAY = os.environ.get('FMS_RELAY', 'rocky@193.123.36.218')
+MAILHOST = os.environ.get('FMS_MAILHOST', 'root@192.168.201.81')   # infra9, the bounces@ mailbox
 MAILBOX = '--mailbox' in sys.argv
 FMS = 'debian@10.0.201.30'
 NOTIFY = 'falcon@fixmystreets.gr'
@@ -46,8 +48,24 @@ if '--days' in sys.argv:
     FILES = max(1, int(sys.argv[sys.argv.index('--days') + 1]) // 7 + 1)
 
 
+KEY = os.path.expanduser('~/.ssh/fms-mail')    # key for the relay and the mailbox host (see the header)
+
+
+def on_fms():
+    return os.path.exists('/opt/fixmystreet/docker-compose.yml')
+
+
+def run_fms(cmd, data=None):
+    """Runs a shell command on the fms VM: here when the script is on it, else by ssh."""
+    argv = ['sh', '-c', cmd] if on_fms() else ['ssh', '-o', 'BatchMode=yes', FMS, cmd]
+    return subprocess.run(argv, input=data, capture_output=True, text=True, timeout=120, check=True).stdout
+
+
 def ssh(host, cmd, data=None):
-    return subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', host, cmd],
+    if host == FMS:
+        return run_fms(cmd, data)
+    key = ['-i', KEY] if os.path.exists(KEY) else []
+    return subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15'] + key + [host, cmd],
                           input=data, capture_output=True, text=True, timeout=120, check=True).stdout
 
 

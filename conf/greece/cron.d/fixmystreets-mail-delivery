@@ -1,9 +1,8 @@
 # FixMyStreets: whether each report's email reached the service (bin/greece/mail-delivery): every hour
 # it reads our relay's log (freevium1) and stores ✓/⚠ on the reports; at 08:05 and 20:05 it also reads
 # the bounces@fixmystreets.gr mailbox (infra9) and sends falcon@ the list. New failures go to falcon@.
-# Runs on the BUILD VM (local time Europe/Athens; it reaches the relay, infra9 and the fms VM by ssh), from a copy of the script.
-# Install (build VM): sudo install -m 755 bin/greece/mail-delivery /data/ci/fms-mail-delivery
-#                     sudo install -m 644 conf/greece/cron.d/fixmystreets-mail-delivery /etc/cron.d/
+# Runs on the fms VM; the relay and the mailbox host are reached with ~/.ssh/fms-mail of user debian.
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-mail-delivery /etc/cron.d/
 SHELL=/bin/sh
-20 * * * * root /data/ci/fms-mail-delivery >> /var/log/fms-mail-delivery.log 2>&1
-5 8,20 * * * root /data/ci/fms-mail-delivery --mailbox >> /var/log/fms-mail-delivery.log 2>&1
+20 * * * * debian /opt/fixmystreet/bin/greece/mail-delivery >> /var/log/fixmystreets/mail-delivery.log 2>&1
+5 8,20 * * * debian /opt/fixmystreet/bin/greece/mail-delivery --mailbox >> /var/log/fixmystreets/mail-delivery.log 2>&1

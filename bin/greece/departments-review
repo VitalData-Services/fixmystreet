@@ -16,13 +16,14 @@ emails falcon@ the list:
 with the date each was last checked. After the review, update the «checked» column of the rows
 looked at in departments.csv and run import-departments again.
 
-It runs on the build VM (it reaches the municipalities' sites and, by ssh, the fms VM's database).
+It runs on the fms VM (the database and sendmail are local; it only needs the municipalities' sites).
 Cron: conf/greece/cron.d/fixmystreets-departments-review (the 1st of January, April, July, October).
 Options: --dry-run (print, no email).
 """
 import base64
 import html
 import json
+import os
 import re
 import ssl
 import subprocess
@@ -42,9 +43,21 @@ FROM contacts c JOIN body b ON b.id = c.body_id
 WHERE c.state = 'confirmed' AND c.extra ? 'greece_departments'"""
 
 
+KEY = os.path.expanduser('~/.ssh/fms-mail')    # key for the relay and the mailbox host (see the header)
+
+
+def on_fms():
+    return os.path.exists('/opt/fixmystreet/docker-compose.yml')
+
+
+def run_fms(cmd, data=None):
+    """Runs a shell command on the fms VM: here when the script is on it, else by ssh."""
+    argv = ['sh', '-c', cmd] if on_fms() else ['ssh', '-o', 'BatchMode=yes', FMS, cmd]
+    return subprocess.run(argv, input=data, capture_output=True, text=True, timeout=120, check=True).stdout
+
+
 def ssh(host, cmd, stdin=None):
-    return subprocess.run(['ssh', '-o', 'BatchMode=yes', host, cmd], input=stdin, capture_output=True,
-                          text=True, check=True).stdout
+    return run_fms(cmd, stdin)
 
 
 def fetch(url):
