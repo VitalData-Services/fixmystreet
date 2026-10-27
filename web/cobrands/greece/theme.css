@@ -1455,3 +1455,23 @@ a[href*="/auth/forgot"], .js-new-report-show-sign-in, .js-hide-name { display: i
     body:not(.mappage) .container, body:not(.mappage) #front-main #front-main-container { max-width: clamp(960px, 82vw, 1440px); }
 }
 .gr-front-cols__recent .gr-recent-none { color: var(--gr-ink-2); }
+
+/* Empty states: the home page's recent-reports column and /reports when nothing is reported yet. */
+.gr-howto { display: grid; gap: 1rem; }
+.gr-howto h3 { margin: 0; font-size: 1.05rem; color: var(--gr-ink); }
+.gr-howto__steps { list-style: none; margin: 0; padding: 0; display: grid; gap: .85rem; }
+.gr-howto__steps li { display: grid; grid-template-columns: 2.6rem 1fr; gap: .75rem; align-items: start; color: var(--gr-ink-2); }
+.gr-howto__steps strong { display: block; color: var(--gr-ink); }
+.gr-howto__icon { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--gr-accent-soft); color: var(--gr-accent-ink); }
+.gr-example { position: relative; border: 1.5px dashed var(--gr-line); border-radius: var(--gr-radius); background: var(--gr-surface); padding: 1.1rem 1rem .9rem; }
+.gr-example__tag { position: absolute; top: -.7rem; left: 1rem; background: var(--gr-warm); color: #3a2800; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .1rem .55rem; border-radius: 999px; }
+.gr-example__body { display: grid; gap: .25rem; color: var(--gr-ink-2); }
+.gr-example__body strong { color: var(--gr-ink); }
+.gr-example__status { justify-self: start; margin-top: .3rem; background: #e7f6ec; color: #14532d; font-size: .85rem; padding: .1rem .6rem; border-radius: 999px; }
+.gr-rmap__empty { display: grid; grid-template-columns: 3.2rem 1fr; gap: 1rem; align-items: start; padding: 1.1rem 1rem; border: 1px solid var(--gr-line); border-radius: var(--gr-radius); background: var(--gr-accent-soft); margin-top: .75rem; }
+.gr-rmap__empty p { margin: 0 0 .5rem; max-width: 60ch; }
+.gr-rmap__empty-icon { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 50%; background: var(--gr-surface); color: var(--gr-accent); }
+.gr-rmap__empty .btn { margin-right: .75rem; }
+@media (max-width: 30em) { .gr-rmap__empty { grid-template-columns: 1fr; } }
+.gr-rmap__empty .gr-rmap__none { color: var(--gr-ink); font-size: 1.05rem; }
+.gr-front-cols__recent .gr-howto h3 { font-size: 1.1rem; font-weight: 700; color: var(--gr-ink); margin: .25rem 0 0; }
