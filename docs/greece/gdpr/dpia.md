@@ -57,7 +57,7 @@ Other points assessed:
 | `gr_voter` cookie | Done 2026-10-27: 90 days |
 | `nsfw/*.json` metadata | Done 2026-10-27: deleted after 30 days by `bin/greece/purge-originals` |
 | Controller: name VitalData Services is on the privacy page; the legal form and postal address are still to add (`GREECE_CONTROLLER_ADDRESS`, then this document and the RoPA) | Owner gives the address |
-| Plausible retention | Decision 2026-10-27: statistics older than 24 months are deleted. Plausible Community Edition has no setting for this, so it is a ClickHouse table TTL on the instance (`plausible.taneda.dev`). **Not yet applied: the instance is not reachable from our servers; whoever administers it must run the commands in the handover note.** Also confirm who operates that instance, because the privacy page says it is our own installation |
+| Plausible retention | Decision 2026-10-27: statistics older than 24 months are deleted. The instance `plausible.taneda.dev` is run by VitalData Services (owner, 2026-10-27), so the privacy page's "our own installation" is accurate. Plausible Community Edition has no setting for this: it is a ClickHouse table TTL. **Not yet applied; commands in `plausible-retention.md`, to run on that server (not reachable from the fms or build VM).** The TTL covers every site on that instance |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
 
