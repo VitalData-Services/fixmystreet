@@ -2,7 +2,7 @@
 
 Version 3, 2026-10-27. Internal document, not published. Reviewed by three independent LLM reviewers (qwen-local, deepseek-v4-flash, gpt-oss-120b) and checked against the deployed code by Claude. Pending: owner approval and, if wanted, a lawyer's reading.
 
-**Controller:** the operator of fixmystreets.gr, contact falcon@fixmystreets.gr. [Still to add: the name of the legal person or the named people behind it, and a postal address. A contact email alone does not identify the controller (Art. 13(1)(a), Art. 30(1)(a)).]
+**Controller:** VitalData Services, contact falcon@fixmystreets.gr. [Still to add: the legal form and postal address. The name is already on the privacy page, section 1; the address goes in `GREECE_CONTROLLER_ADDRESS` in the private configuration.]
 **Hosting:** the operator's own server (Veeam-backed hypervisor), reached through a Cloudflare Tunnel. Mail leaves through the operator's own relay.
 **Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
 **Why a DPIA:** the service combines systematic collection of precise location, photographs of public space (faces and vehicle plates of passers-by) and optional video, and publishes part of it. That matches several criteria of the WP248 guidance and the Hellenic Data Protection Authority's list under Art. 35(4) (location and image data, and data about third parties who are not told). A DPIA is the safe course even if a single criterion would not require it.
@@ -56,7 +56,7 @@ Other points assessed:
 | Veeam backups | Owner confirmed they are in order (2026-10-27); repeat the restore check once a year |
 | `gr_voter` cookie | Done 2026-10-27: 90 days |
 | `nsfw/*.json` metadata | Done 2026-10-27: deleted after 30 days by `bin/greece/purge-originals` |
-| Add the controller's name and postal address next to the contact email (falcon@fixmystreets.gr) on the privacy page and in the RoPA | Owner |
+| Controller: name VitalData Services is on the privacy page; the legal form and postal address are still to add (`GREECE_CONTROLLER_ADDRESS`, then this document and the RoPA) | Owner gives the address |
 | Plausible retention | Decision 2026-10-27: statistics older than 24 months are deleted. Plausible Community Edition has no setting for this, so it is a ClickHouse table TTL on the instance (`plausible.taneda.dev`). **Not yet applied: the instance is not reachable from our servers; whoever administers it must run the commands in the handover note.** Also confirm who operates that instance, because the privacy page says it is our own installation |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
