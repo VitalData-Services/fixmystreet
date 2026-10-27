@@ -57,7 +57,7 @@ Other points assessed:
 | `gr_voter` cookie | Done 2026-10-27: 90 days |
 | `nsfw/*.json` metadata | Done 2026-10-27: deleted after 30 days by `bin/greece/purge-originals` |
 | Add the controller's name and postal address next to the contact email (falcon@fixmystreets.gr) on the privacy page and in the RoPA | Owner |
-| Plausible retention period | Owner |
+| Plausible retention | Decision 2026-10-27: statistics older than 24 months are deleted. Plausible Community Edition has no setting for this, so it is a ClickHouse table TTL on the instance (`plausible.taneda.dev`). **Not yet applied: the instance is not reachable from our servers; whoever administers it must run the commands in the handover note.** Also confirm who operates that instance, because the privacy page says it is our own installation |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
 
