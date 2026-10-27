@@ -90,6 +90,20 @@ def mark_seen(uids):
     conn.logout()
 
 
+def purge_old(days=90):
+    """Deletes the messages of the bounces@ mailbox that are read and older than DAYS days (retention)."""
+    from datetime import timedelta
+    conn = imap_open()
+    before = (datetime.now() - timedelta(days=days)).strftime('%d-%b-%Y')
+    uids = conn.uid('search', None, 'SEEN', 'BEFORE', before)[1][0].split()
+    for uid in uids:
+        conn.uid('store', uid, '+FLAGS', r'(\Deleted)')
+    if uids:
+        conn.expunge()
+    conn.logout()
+    return len(uids)
+
+
 def ssh(host, cmd, data=None):
     if host == FMS:
         return run_fms(cmd, data)
@@ -253,5 +267,11 @@ if box_files:
             else:
                 lines.append(f"    από: {m['from']}, προς: {m['to']}")
         lines.append('')
-        lines.append('Τα μηνύματα είναι στο bounces@fixmystreets.gr (σημειωμένα ως διαβασμένα).')
+        lines.append('Τα μηνύματα είναι στο bounces@fixmystreets.gr (σημειωμένα ως διαβασμένα· σβήνονται μετά από 90 ημέρες).')
         ssh(FMS, f'/usr/sbin/sendmail -f noreply@fixmystreets.gr {NOTIFY}', '\n'.join(lines) + '\n')
+
+# Retention: messages read and older than 90 days are deleted from the mailbox (twice a day, with --mailbox).
+if MAILBOX and not DRY:
+    n = purge_old(90)
+    if n:
+        print('mailbox: %d message(s) older than 90 days deleted' % n)
