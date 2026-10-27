@@ -4,7 +4,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 
 **Controller:** VitalData Services, contact falcon@fixmystreets.gr. [Still to add: the legal form and postal address. The name is already on the privacy page, section 1; the address goes in `GREECE_CONTROLLER_ADDRESS` in the private configuration.]
 **Hosting:** the operator's own server (Veeam-backed hypervisor), reached through a Cloudflare Tunnel. Mail leaves through the operator's own relay.
-**Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
+**Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), the operator of `plausible.taneda.dev` (no agreement yet, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
 **Why a DPIA:** the service combines systematic collection of precise location, photographs of public space (faces and vehicle plates of passers-by) and optional video, and publishes part of it. That matches several criteria of the WP248 guidance and the Hellenic Data Protection Authority's list under Art. 35(4) (location and image data, and data about third parties who are not told). A DPIA is the safe course even if a single criterion would not require it.
 
 ## 1. The processing
@@ -58,7 +58,7 @@ Other points assessed:
 | `gr_voter` cookie | Done 2026-10-27: 90 days |
 | `nsfw/*.json` metadata | Done 2026-10-27: deleted after 30 days by `bin/greece/purge-originals` |
 | Controller: name VitalData Services is on the privacy page; the legal form and postal address are still to add (`GREECE_CONTROLLER_ADDRESS`, then this document and the RoPA) | Owner gives the address |
-| Plausible retention | Decision 2026-10-27: statistics older than 24 months are deleted. The instance `plausible.taneda.dev` is run by VitalData Services (owner, 2026-10-27), so the privacy page's "our own installation" is accurate. Plausible Community Edition has no setting for this: it is a ClickHouse table TTL. **Not yet applied; commands in `plausible-retention.md`, to run on that server (not reachable from the fms or build VM).** The TTL covers every site on that instance |
+| Plausible (visit counts) | The instance `plausible.taneda.dev` is run by a third party, not by us (owner, 2026-10-27). That makes the operator a processor for the visit data it receives (page, country, device; no cookie, no IP stored). We have no processing agreement with it and cannot set a retention period there. The privacy page now says so. Options: (a) agree terms and a retention period with the operator, (b) run our own Plausible, (c) remove the script from `header_extra.html`. Decision pending |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
 

@@ -1,4 +1,4 @@
-# Plausible retention: 24 months (handover for the instance's administrator)
+# Plausible retention (not applicable now: the instance is run by a third party)
 
 Instance: plausible.taneda.dev (Plausible Community Edition, ClickHouse). Site added: fixmystreets.gr.
 Rule: delete statistics older than 24 months. Plausible stores no IP and no cookie, but the period is stated in our DPIA.
