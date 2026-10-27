@@ -975,7 +975,7 @@ sub greece_voter {
         read $fh, my $bytes, 16;
         close $fh;
         $id = unpack 'H*', $bytes;
-        $c->res->cookies->{gr_voter} = { value => $id, expires => '+2y', path => '/', httponly => 1, secure => 1 };
+        $c->res->cookies->{gr_voter} = { value => $id, expires => '+90d', path => '/', httponly => 1, secure => 1 };
     }
     require Digest::SHA;
     return 'c:' . Digest::SHA::sha256_hex($id);
