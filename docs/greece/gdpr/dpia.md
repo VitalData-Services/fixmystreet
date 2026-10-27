@@ -43,7 +43,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 Other points assessed:
 - **Third parties in photos and videos.** Passers-by and vehicles appear incidentally. They are data subjects (Art. 14, with the exemption for disproportionate effort in Art. 14(5)(b), supported by the privacy page's note that plates and faces are blurred and by the instruction not to write third-party names).
 - **Special categories (Art. 9).** The service does not ask for health, sex life or similar data. Photos of a disabled parking bay concern a parking violation, not the health of a person, and the category does not record who is disabled. Photos can still show injured people or nudity by accident; those are caught by the nudity check and moderation. If a moderator sees such content it is hidden. This conclusion is the operator's and should be confirmed.
-- **Cookies (ePrivacy, Greek law 3471/2006).** Login session, Turnstile and the saved report draft are strictly necessary. The `gr_voter` cookie holds a random id for two years so a vote counts once. It is used only for the vote the user asks for, but two years is long. Recommended: shorten to 90 days or make it a session cookie.
+- **Cookies (ePrivacy, Greek law 3471/2006).** Login session, Turnstile and the saved report draft are strictly necessary. The `gr_voter` cookie holds a random id for 90 days (shortened from two years on 2026-10-27) so a vote counts once. It is used only for the vote the user asks for.
 - **Digital Services Act (Regulation 2022/2065).** The service hosts content from users. To check: a published point of contact, a way to notify illegal content, and the exemptions for micro and small enterprises. Not verified against the text here.
 
 ## 4. Open measures
@@ -56,7 +56,6 @@ Other points assessed:
 | Delete `nsfw/*.json` metadata older than 30 days (today `purge-originals` ignores them; the folder is empty) | Claude, small change |
 | Plausible retention period | Owner |
 | Restore test of the Veeam backups, once a year | Owner |
-| Shorten the `gr_voter` cookie lifetime | Owner decides |
 | Rate limit for plain map and listing views | Optional |
 | Check the Digital Services Act duties | Owner or lawyer |
 
