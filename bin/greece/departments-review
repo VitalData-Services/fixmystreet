@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""The review, every three months, of the municipal services' addresses (owner, 2026-10-27).
+
+A municipality's category can go to the service that handles it, with the municipality's central
+address in Cc (bin/greece/import-departments, data/greece/contacts/departments.csv). Such addresses
+are often a person's, and people move, so each is checked again every three months. This reads the
+routed categories from the database (contact extra greece_departments: department, email, phone,
+source page, date checked), opens each source page again and looks for each address on it, and
+emails falcon@ the list:
+
+    gone        the page no longer has the address: find the new one, or send the category back to
+                the central address (remove its rows from departments.csv and re-import)
+    unreachable the page did not open: check by hand
+    found       still on the page
+
+with the date each was last checked. After the review, update the «checked» column of the rows
+looked at in departments.csv and run import-departments again.
+
+It runs on the build VM (it reaches the municipalities' sites and, by ssh, the fms VM's database).
+Cron: conf/greece/cron.d/fixmystreets-departments-review (the 1st of January, April, July, October).
+Options: --dry-run (print, no email).
+"""
+import base64
+import html
+import json
+import re
+import ssl
+import subprocess
+import sys
+import urllib.parse
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date
+
+FMS = 'debian@10.0.201.30'
+NOTIFY = 'falcon@fixmystreets.gr'
+DUE_DAYS = 90
+
+QUERY = r"""SELECT json_agg(json_build_object('body', b.name, 'category', c.category, 'to', c.email,
+  'cc', c.extra->>'greece_cc', 'rows', c.extra->'greece_departments'))
+FROM contacts c JOIN body b ON b.id = c.body_id
+WHERE c.state = 'confirmed' AND c.extra ? 'greece_departments'"""
+
+
+def ssh(host, cmd, stdin=None):
+    return subprocess.run(['ssh', '-o', 'BatchMode=yes', host, cmd], input=stdin, capture_output=True,
+                          text=True, check=True).stdout
+
+
+def fetch(url):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (FixMyStreets address review)'})
+    try:
+        with urllib.request.urlopen(req, timeout=25, context=ctx) as r:
+            return r.read().decode('utf-8', 'replace')
+    except Exception:
+        return None
+
+
+def page_emails(s):
+    """The addresses on a page, with the usual hiding undone (entities, Joomla's base64, Cloudflare's)."""
+    out = set()
+    for m in re.finditer(r'<joomla-hidden-mail[^>]*first="([^"]*)"[^>]*last="([^"]*)"', s):
+        try:
+            out.add(base64.b64decode(m.group(1)).decode() + '@' + base64.b64decode(m.group(2)).decode())
+        except Exception:
+            pass
+    for enc in re.findall(r'data-cfemail="([0-9a-f]+)"', s) + re.findall(r'email-protection#([0-9a-f]+)', s):
+        k = int(enc[:2], 16)
+        out.add(''.join(chr(int(enc[i:i + 2], 16) ^ k) for i in range(2, len(enc), 2)))
+    text = html.unescape(urllib.parse.unquote(s))
+    text = re.sub(r'\s*(?:\[at\]|\(at\)|\[παπάκι\])\s*', '@', text, flags=re.I)
+    out |= set(re.findall(r'[\w.+-]+@[\w-]+(?:\.[\w-]+)+', text))
+    return {e.lower().strip('.') for e in out}
+
+
+def main(argv):
+    dry = '--dry-run' in argv
+    raw = ssh(FMS, 'cd /opt/fixmystreet && docker compose exec -T postgres psql -U fms -d fixmystreet -At',
+              QUERY).strip()
+    contacts = json.loads(raw) if raw else []
+    urls = sorted({r.get('source') for c in contacts for r in (c['rows'] or []) if r.get('source')})
+    with ThreadPoolExecutor(8) as ex:
+        pages = dict(zip(urls, ex.map(fetch, urls)))
+    found = {u: page_emails(s) for u, s in pages.items() if s is not None}
+
+    today = date.today()
+    lines, counts = [], {'gone': 0, 'unreachable': 0, 'found': 0, 'due': 0}
+    seen = set()
+    for c in sorted(contacts, key=lambda c: (c['body'], c['category'])):
+        for r in c['rows'] or []:
+            key = (c['body'], r['email'], r.get('source'))
+            if key in seen:
+                continue
+            seen.add(key)
+            src = r.get('source') or ''
+            state = 'unreachable' if src not in found else 'found' if r['email'] in found[src] else 'gone'
+            counts[state] += 1
+            try:
+                age = (today - date.fromisoformat(r.get('checked') or '')).days
+            except ValueError:
+                age = None
+            due = age is None or age >= DUE_DAYS
+            counts['due'] += due
+            if state != 'found' or due:
+                lines.append(f"{state:11} {c['body']}: {r['department']} <{r['email']}>"
+                             f" (checked {r.get('checked') or 'never'}) {src}")
+    head = [f'Municipal service addresses, review of {today.isoformat()}',
+            f"{len(seen)} addresses: {counts['found']} still on their page, {counts['gone']} gone, "
+            f"{counts['unreachable']} page unreachable; {counts['due']} last checked {DUE_DAYS}+ days ago.",
+            'After checking, update «checked» in data/greece/contacts/departments.csv and run bin/greece/import-departments.',
+            '']
+    body = '\n'.join(head + (lines or ['Nothing to look at.']))
+    print(body)
+    if not dry:
+        msg = (f'From: FixMyStreets <noreply@fixmystreets.gr>\nTo: {NOTIFY}\n'
+               f"Subject: Review of municipal service addresses: {counts['gone']} gone, {counts['unreachable']} unreachable\n"
+               'Content-Type: text/plain; charset=utf-8\n\n' + body + '\n')
+        ssh(FMS, f'/usr/sbin/sendmail -f noreply@fixmystreets.gr {NOTIFY}', msg)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

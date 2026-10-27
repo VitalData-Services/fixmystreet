@@ -1,0 +1,83 @@
+#!/usr/bin/env perl
+#
+# Routes municipalities' categories to the service that handles each (owner, 2026-10-27): the
+# service's address in To, the municipality's central address in Cc. Read from
+# data/greece/contacts/departments.csv, one row per service and category:
+#
+#   osm_rel,name_el,category,department,email,phone,source_url,checked
+#
+# Rows for the same municipality and category are sent together (To has every address). The
+# central address is the one of the municipality's «Άλλο» category, which stays as it is, as do
+# the categories with no row. Each contact keeps, in its extra metadata, greece_cc (the central
+# address), greece_departments (the rows: department, email, phone, source, checked) and
+# greece_checked (the oldest check date of its rows), which bin/greece/departments-review reads
+# for the review every three months.
+#
+# Usage (in the container, from bin/): ./cron-wrapper perl - [--dry-run] [--only=<name_el>] < import-departments
+#   with the CSV at ../data/greece/contacts/departments.csv (or --csv=<path>).
+
+use strict;
+use warnings;
+use utf8;
+use open qw(:std :encoding(UTF-8));
+
+use FixMyStreet;
+use FixMyStreet::DB;
+use Getopt::Long qw(GetOptionsFromArray);
+use Text::CSV;
+
+my %opt = (csv => '../data/greece/contacts/departments.csv');
+GetOptionsFromArray(\@ARGV, \%opt, 'dry-run', 'only=s', 'csv=s') or die "bad options\n";
+
+my $csv = Text::CSV->new({ binary => 1, auto_diag => 1 });
+open my $fh, '<:encoding(UTF-8)', $opt{csv} or die "$opt{csv}: $!\n";
+my $head = $csv->getline($fh);
+$csv->column_names(@$head);
+
+my %route;    # name => category => [ rows ]
+while (my $row = $csv->getline_hr($fh)) {
+    next if $opt{only} && $row->{name_el} ne $opt{only};
+    next if $row->{category} =~ /^Άλλ[οα]$/;    # «Άλλο» keeps the central address
+    $row->{email} = lc($row->{email} // '');
+    $row->{email} =~ s/\s+//g;
+    unless ($row->{email} =~ /^[^@\s,]+\@[^@\s,]+\.[a-z]+$/) {
+        print "skipped (address): $row->{name_el} / $row->{category} / $row->{email}\n";
+        next;
+    }
+    push @{ $route{ $row->{name_el} }{ $row->{category} } }, $row;
+}
+
+my $schema = FixMyStreet::DB->schema;
+my $changed = 0;
+for my $name (sort keys %route) {
+    my $body = $schema->resultset('Body')->search({ name => $name, deleted => 0 })->first;
+    unless ($body) { print "no body: $name\n"; next; }
+    my $other = $schema->resultset('Contact')->search({ body_id => $body->id, category => 'Άλλο', state => 'confirmed' })->first;
+    my $central = $other ? lc($other->email // '') : '';
+    print "$name: no central address («Άλλο»), no Cc\n" unless $central =~ /\@/;
+    for my $category (sort keys %{ $route{$name} }) {
+        my $contact = $schema->resultset('Contact')->search({ body_id => $body->id, category => $category, state => { '!=' => 'deleted' } })->first;
+        unless ($contact) { print "no category: $name / $category\n"; next; }
+        my @rows = @{ $route{$name}{$category} };
+        my %seen;
+        my @to = grep { !$seen{$_}++ } map { $_->{email} } @rows;
+        my $to = join ',', @to;
+        my $cc = $central =~ /\@/ && !$seen{$central} ? $central : '';
+        my @checked = sort grep { /^\d{4}-\d\d-\d\d$/ } map { $_->{checked} // '' } @rows;
+        printf "%s / %s: %s%s%s\n", $name, $category, $to, $cc ? " (cc $cc)" : '',
+            lc($contact->email // '') eq $to ? '' : '  [was ' . ($contact->email // '') . ']';
+        next if $opt{'dry-run'};
+        $contact->email($to);
+        $contact->set_extra_metadata(greece_cc => $cc);
+        $contact->set_extra_metadata(greece_departments => [ map { +{
+            department => $_->{department}, email => $_->{email}, phone => $_->{phone} // '',
+            source => $_->{source_url} // '', checked => $_->{checked} // '' } } @rows ]);
+        $contact->set_extra_metadata(greece_checked => $checked[0] // '');
+        $contact->editor('import-departments');
+        $contact->whenedited(\'current_timestamp');
+        $contact->note('Υπηρεσία: ' . join(' · ', map { "$_->{department}, $_->{email}" } @rows) . ($cc ? "; κοιν. $cc" : ''));
+        $contact->update;
+        $changed++;
+    }
+}
+print "$changed categor", ($changed == 1 ? 'y' : 'ies'), " updated\n" unless $opt{'dry-run'};

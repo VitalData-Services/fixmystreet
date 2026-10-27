@@ -1,0 +1,6 @@
+# Review of the municipal services' addresses, every three months (owner, 2026-10-27): reopens each
+# address's source page and emails falcon@ which ones are gone, unreachable or due
+# (bin/greece/departments-review). On the build VM, which reaches the municipalities' sites and the
+# fms VM. Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-departments-review /etc/cron.d/
+SHELL=/bin/sh
+0 9 1 1,4,7,10 * root /data/ci/fms-departments-review >> /var/log/fms-departments-review.log 2>&1

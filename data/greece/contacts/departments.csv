@@ -1,8 +1,12 @@
-osm_rel,name_el,category,department,email,phone,source_url
-1395480,Δήμος Χαϊδαρίου,Λακκούβα ή φθορά οδοστρώματος,Διεύθυνση Τεχνικών Υπηρεσιών (γραμματεία),texniki@haidari.gr,213 20 47 202,https://www.haidari.gr/tilefona-epikoinonias/
-1395480,Δήμος Χαϊδαρίου,Πρόβλημα με πεζοδρόμιο,Διεύθυνση Τεχνικών Υπηρεσιών (φθορές και ράμπες ΑμεΑ),texniki@haidari.gr,213 20 47 202,https://www.haidari.gr/tilefona-epikoinonias/
-1395480,Δήμος Χαϊδαρίου,Πρόβλημα με πεζοδρόμιο,Τμήμα Ελέγχου Κοινοχρήστων Χώρων (εμπόδια και τραπεζοκαθίσματα),mpenekos@haidari.gr,213 20 47 368,https://www.haidari.gr/tilefona-epikoinonias/
-1395480,Δήμος Χαϊδαρίου,Οδοφωτισμός,Τμήμα Ηλεκτρομηχανολογικών Έργων και Οδοφωτισμού,fkampolis@haidari.gr,213 20 47 292,https://www.haidari.gr/tilefona-epikoinonias/
-1395480,Δήμος Χαϊδαρίου,Σκουπίδια και καθαριότητα,Διεύθυνση Καθαριότητας και Βιώσιμης Διαχείρισης Απορριμμάτων,pettas@haidari.gr,210 58 18 860,https://www.haidari.gr/tilefona-epikoinonias/
-1395480,Δήμος Χαϊδαρίου,Πράσινο και δέντρα,Διεύθυνση Ανάπτυξης – Συντήρησης Πρασίνου,parasxou@haidari.gr,210 58 22 368,https://www.haidari.gr/tilefona-epikoinonias/
-1395480,Δήμος Χαϊδαρίου,Άλλα,Αυτοτελές Τμήμα Ανταπόκρισης σε Αναφορές και Προτάσεις Πολιτών,grafiodimotihaidari@gmail.com,213 20 47 207,https://www.haidari.gr/tilefona-epikoinonias/
+osm_rel,name_el,category,department,email,phone,source_url,checked
+1395480,Δήμος Χαϊδαρίου,Λακκούβα ή φθορά οδοστρώματος,Διεύθυνση Τεχνικών Υπηρεσιών (γραμματεία),texniki@haidari.gr,213 20 47 202,https://www.haidari.gr/tilefona-epikoinonias/,2026-10-24
+1395480,Δήμος Χαϊδαρίου,Πρόβλημα με πεζοδρόμιο,Διεύθυνση Τεχνικών Υπηρεσιών (φθορές και ράμπες ΑμεΑ),texniki@haidari.gr,213 20 47 202,https://www.haidari.gr/tilefona-epikoinonias/,2026-10-24
+1395480,Δήμος Χαϊδαρίου,Πρόβλημα με πεζοδρόμιο,Τμήμα Ελέγχου Κοινοχρήστων Χώρων (εμπόδια και τραπεζοκαθίσματα),mpenekos@haidari.gr,213 20 47 368,https://www.haidari.gr/tilefona-epikoinonias/,2026-10-24
+1395480,Δήμος Χαϊδαρίου,Οδοφωτισμός,Τμήμα Ηλεκτρομηχανολογικών Έργων και Οδοφωτισμού,fkampolis@haidari.gr,213 20 47 292,https://www.haidari.gr/tilefona-epikoinonias/,2026-10-24
+1395480,Δήμος Χαϊδαρίου,Φρεάτια και καθαριότητα,Διεύθυνση Καθαριότητας και Βιώσιμης Διαχείρισης Απορριμμάτων,pettas@haidari.gr,210 58 18 860,https://www.haidari.gr/tilefona-epikoinonias/,2026-10-24
+1395480,Δήμος Χαϊδαρίου,Πράσινο και δέντρα,Διεύθυνση Ανάπτυξης – Συντήρησης Πρασίνου,parasxou@haidari.gr,210 58 22 368,https://www.haidari.gr/tilefona-epikoinonias/,2026-10-24
+2186728,Δήμος Ξυλοκάστρου - Ευρωστίνης,Λακκούβα ή φθορά οδοστρώματος,Τεχνική Υπηρεσία,akitsou@xylokastro.gov.gr,27433 60250,https://www.xylokastro-evrostini.gov.gr/el/thelo-na/epikoinoneso,2026-10-27
+2186728,Δήμος Ξυλοκάστρου - Ευρωστίνης,Πρόβλημα με πεζοδρόμιο,Τεχνική Υπηρεσία,akitsou@xylokastro.gov.gr,27433 60250,https://www.xylokastro-evrostini.gov.gr/el/thelo-na/epikoinoneso,2026-10-27
+2186728,Δήμος Ξυλοκάστρου - Ευρωστίνης,Οδοφωτισμός,Τμήμα Ηλεκτρομηχανολογικού,pchartsias@xylokastro.gov.gr,27433 60231,https://www.xylokastro-evrostini.gov.gr/el/thelo-na/epikoinoneso,2026-10-27
+2186728,Δήμος Ξυλοκάστρου - Ευρωστίνης,Φρεάτια και καθαριότητα,Υπηρεσία Καθαριότητας,sspanos@xylokastro.gov.gr,27433 60252,https://www.xylokastro-evrostini.gov.gr/el/thelo-na/epikoinoneso,2026-10-27
+2186728,Δήμος Ξυλοκάστρου - Ευρωστίνης,Πράσινο και δέντρα,Υπηρεσία δασών & περιβάλλοντος,aandrikop@xylokastro.gov.gr,27433 60248,https://www.xylokastro-evrostini.gov.gr/el/thelo-na/epikoinoneso,2026-10-27
