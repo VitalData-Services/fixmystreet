@@ -15,7 +15,7 @@
     (<a href="[% c.cobrand.privacy_policy_url %]">[% c.cobrand.greece_t('πολιτική απορρήτου', 'privacy policy') %]</a>).
 [% ELSE %]
     [% c.cobrand.greece_t('Παραλήπτης:', 'Sent to:') %] <strong>[% names %]</strong>.
-    [% c.cobrand.greece_t('Στέλνονται το σημείο, η περιγραφή και η φωτογραφία (στην αστυνομία με ευανάγνωστη πινακίδα)· το όνομα και το τηλέφωνο μόνο αν τα δώσεις, το email μόνο αν το επιβεβαιώσεις.', 'What is sent: the place, the description and the photo (to the police with the plate readable); your name and phone only if you give them, your email only if you confirm it.') %]
+    [% c.cobrand.greece_t('Στέλνονται το σημείο και η διεύθυνση, η κατηγορία, η περιγραφή, η φωτογραφία (στην αστυνομία με ευανάγνωστη πινακίδα) και η ημερομηνία· το όνομα και το τηλέφωνο μόνο αν τα δώσεις, το email μόνο αν το επιβεβαιώσεις.', 'What is sent: the place and address, the category, the description, the photo (to the police with the plate readable) and the date; your name and phone only if you give them, your email only if you confirm it.') %]
     [% c.cobrand.greece_t('Η αναφορά δεν δημοσιεύεται.', 'The report is not published.') %]
 [% END %]
 [% TRY %][% INCLUDE 'report/new/councils_extra_text.html' %][% CATCH file %][% END %]
