@@ -1,0 +1,6 @@
+# FixMyStreets: anonymise the personal data of reports with no activity for 24 months, and of accounts unused
+# for 24 months (email warning 30 days before) (bin/greece/anonymise-old, privacy page §8).
+# Output in /var/log/fixmystreets/anonymise-old.log
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-anonymise-old /etc/cron.d/
+SHELL=/bin/sh
+10 3 * * * debian cd /opt/fixmystreet && docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - < bin/greece/anonymise-old >> /var/log/fixmystreets/anonymise-old.log 2>&1

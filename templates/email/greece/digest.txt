@@ -13,7 +13,7 @@ Subject: [% items.size %] [% items.size == 1 ? 'νέα αναφορά' : 'νέε
 [% it.detail || r.detail %]
 
 [% IF it.photos %]Φωτογραφίες: [% it.photos %]. [% END %][% IF it.video_seconds %]Βίντεο: [% it.video_seconds | format('%d') %]" (στην πλατφόρμα). [% END %]
-Από: [% r.anonymous ? 'Ανώνυμα' : r.name %][% IF it.email %] · [% it.email %][% IF it.email_unconfirmed %] (χωρίς επιβεβαίωση)[% END %][% END %][% IF it.phone %] · [% it.phone %][% END %]
+Από: [% it.name || 'χωρίς όνομα' %][% IF it.email %] · [% it.email %][% IF it.email_unconfirmed %] (χωρίς επιβεβαίωση)[% END %][% END %][% IF it.phone %] · [% it.phone %][% END %][% UNLESS it.email OR it.phone %] · χωρίς στοιχεία επικοινωνίας[% END %]
 Αναφορά: [% it.url %]
 [% END %]
 ----------

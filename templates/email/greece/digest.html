@@ -31,9 +31,10 @@ small = "margin: 0 0 6px 0; font-size: 14px; line-height: 19px; color: #475569;"
     [%~ IF it.photos OR it.video_seconds %]
     <tr><th style="[% tth %]">Υλικό</th><td style="[% ttd %]">[% IF it.photos %]📷 [% it.photos %] [% it.photos == 1 ? 'φωτογραφία' : 'φωτογραφίες' %][% END %][% IF it.photos AND it.video_seconds %] · [% END %][% IF it.video_seconds %]🎬 βίντεο [% it.video_seconds | format('%d') %]" (στην πλατφόρμα)[% END %]</td></tr>
     [%~ END %]
-    <tr><th style="[% tth %]">Πολίτης</th><td style="[% ttd %]">[% r.anonymous ? 'Ανώνυμα' : r.name | html %]
+    <tr><th style="[% tth %]">Πολίτης</th><td style="[% ttd %]">[% (it.name || 'χωρίς όνομα') | html %]
       [%~ IF it.email %]<br><a href="mailto:[% it.email | html %]?subject=[% ('Η αναφορά σας ' _ r.greece_ref) | uri %]">[% it.email | html %]</a>[% IF it.email_unconfirmed %] <span style="color: #64748b;">(χωρίς επιβεβαίωση)</span>[% END %][% END ~%]
-      [%~ IF it.phone %]<br><a href="tel:[% it.phone | html %]">[% it.phone | html %]</a>[% END %]</td></tr>
+      [%~ IF it.phone %]<br><a href="tel:[% it.phone | html %]">[% it.phone | html %]</a>[% END %]
+      [%~ UNLESS it.email OR it.phone %]<br><span style="color: #64748b;">χωρίς στοιχεία επικοινωνίας</span>[% END %]</td></tr>
     <tr><td colspan="2" style="padding: 10px 12px; text-align: right;"><a style="[% button_style %] font-size: 14px; border-width: 8px 16px;" href="[% it.url %]">Άνοιγμα αναφοράς</a></td></tr>
   </table>
   [% END %]

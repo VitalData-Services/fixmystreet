@@ -186,12 +186,16 @@ sub digest_item {
     $address =~ s/, (Περιφερειακή Ενότητα|Περιφέρεια|Αποκεντρωμένη Διοίκηση)[^,]*//g;
     $address =~ s/, Ελλάς$//;
     my $user = $r->user;
+    # The name the reporter typed goes to the municipality; the site's placeholder for «no name» does not.
+    my $name = $r->name // '';
+    $name = '' if $name =~ /^\s*$/ || $name eq ($cobrand->anonymous_account->{name} // '') || $name =~ /^Ανώνυμ/;
     return {
         report => $r,
         url => $cobrand->base_url_for_report($r) . $r->url,
         gmaps_url => sprintf('https://maps.google.com/maps?q=%s,%s', $r->latitude, $r->longitude),
         address => $address,
         detail => $r->get_extra_metadata('greece_detail_full') || $r->detail,
+        name => $name,
         email => $anonymous || !$user ? '' : $user->email // '',
         email_unconfirmed => $anonymous || $r->get_extra_metadata('greece_email_confirmed') ? 0 : 1,
         phone => ($user && !$anonymous ? $user->phone : '') || $r->get_extra_metadata('greece_phone') || '',

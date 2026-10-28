@@ -1,0 +1,133 @@
+#!/usr/bin/env perl
+# Retention for personal data that is not needed any more (privacy page §8, owner's decision 2026-10-28):
+#
+#   - a report that has had no activity for 24 months (bin: lastupdate) loses what can identify a person: it is
+#     filed under the shared anonymous account, the name, phone, free text and photos go (the title and the text
+#     become the category), and so do the personal parts of its updates by citizens. What stays is the map
+#     history: the point, the category, the municipality, the state, the dates, the replies of the staff. The
+#     photo files are not unlinked here: bin/greece/retention removes the files no report names any more;
+#   - an account not used for 24 months is warned by email 30 days before, then anonymised with FixMyStreet's
+#     own anonymize_account (as bin/greece/dsar erase does). Staff, superusers and the anonymous account are
+#     never touched. A sign-in after the warning cancels it.
+#
+# Prints what it did; --dry-run does everything in a transaction and rolls it back, and sends no email.
+#
+# Runs inside the app container, daily from the host's cron:
+#   docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - [--dry-run] \
+#       < /opt/fixmystreet/bin/greece/anonymise-old
+
+use strict;
+use warnings;
+use utf8;
+
+use FixMyStreet;
+use FixMyStreet::DB;
+use FixMyStreet::Cobrand;
+use FixMyStreet::Cobrand::Greece;
+use FixMyStreet::Email;
+
+binmode STDOUT, ':utf8';
+
+my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
+my $REPORT_MONTHS = 24;
+my $ACCOUNT_MONTHS = 24;
+my $WARN_DAYS = 30;
+
+my $cobrand = FixMyStreet::Cobrand->get_class_for_moniker('greece')->new;
+my $schema = FixMyStreet::DB->schema;
+my $dbh = $schema->storage->dbh;
+my $anon = $cobrand->anonymous_account or die "No anonymous account configured.\n";
+my $anon_user = $schema->resultset('User')->find({ email => $anon->{email} }) or die "The anonymous account does not exist.\n";
+my %did;
+
+# What a report or update keeps in its extra data that can identify someone (phone, the full text, the privacy
+# flag's reason and contact, copies of addresses). The rest is about the report, not a person.
+my @PERSONAL_EXTRA = qw(greece_phone greece_detail_full greece_privacy_flag greece_cc greece_digest_env);
+my $VIDEO_ROOT = '/var/lib/fms-videos';
+
+$schema->txn_begin;
+
+# --- reports ---------------------------------------------------------------------------------------------
+my $ids = $dbh->selectcol_arrayref(qq{SELECT id FROM problem
+    WHERE lastupdate < now() - interval '$REPORT_MONTHS months' AND state <> 'unconfirmed'
+      AND extra::text NOT LIKE '%greece_anonymised%' ORDER BY id});
+for my $id (@$ids) {
+    my $p = $schema->resultset('Problem')->find($id) or next;
+    my $last = $p->lastupdate;
+    my $comments = $p->comments;
+    while (my $c = $comments->next) {
+        # The staff's replies are the history of what the municipality did; a citizen's update is personal.
+        next if $c->user && ($c->user->from_body || $c->user->is_superuser);
+        $c->update({ user_id => $anon_user->id, name => $anon->{name}, anonymous => 1, text => '', photo => undef });
+        $did{'updates by citizens emptied'}++;
+    }
+    if (my $v = $p->get_extra_metadata('greece_video')) {
+        if ($v =~ /^[0-9a-f]{32}$/ && !$dry_run) { unlink "$VIDEO_ROOT/ready/$v.mp4", "$VIDEO_ROOT/claimed/$v" }
+        $p->unset_extra_metadata('greece_video');
+        $p->unset_extra_metadata('greece_video_seconds');
+    }
+    $p->unset_extra_metadata($_) for @PERSONAL_EXTRA;
+    $p->set_extra_metadata(greece_anonymised => time);
+    my $cat = $p->category;
+    $p->user_id($anon_user->id);
+    $p->name($anon->{name});
+    $p->anonymous(1);
+    $p->title($cat);
+    $p->detail($cat);
+    $p->photo(undef);
+    $p->send_questionnaire(0);
+    $p->lastupdate($last);    # the clean-up is not an activity
+    $p->update;
+    $did{"reports anonymised (no activity for $REPORT_MONTHS months)"}++;
+}
+
+# --- accounts --------------------------------------------------------------------------------------------
+my $domain = FixMyStreet->config('EMAIL_DOMAIN');
+my $users = $schema->resultset('User')->search(\[ qq{
+    id <> ? AND NOT is_superuser AND from_body IS NULL AND email NOT LIKE 'removed-%'
+    AND coalesce(last_active, created) < now() - interval '@{[ $ACCOUNT_MONTHS - 1 ]} months'
+    AND NOT EXISTS (SELECT 1 FROM user_body_permissions p WHERE p.user_id = me.id)
+    AND NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = me.id)}, $anon_user->id ]);
+my $env = 'fms-retention@' . ($domain || 'fixmystreets.gr');
+while (my $u = $users->next) {
+    my $warned = $u->get_extra_metadata('greece_inactive_warned');
+    my $limit = $dbh->selectrow_array(qq{SELECT coalesce(last_active, created) < now() - interval '$ACCOUNT_MONTHS months'
+        FROM users WHERE id = ?}, undef, $u->id);
+    if ($warned && $limit && time - $warned >= $WARN_DAYS * 86400) {
+        my $email = $u->email;
+        for my $p ($u->problems->all) {
+            next unless defined $p->get_extra_metadata('greece_phone');
+            $p->unset_extra_metadata('greece_phone');
+            $p->update;
+        }
+        $u->anonymize_account;
+        $u->unset_extra_metadata('greece_lang');
+        $u->unset_extra_metadata('greece_inactive_warned');
+        $u->update;
+        $dbh->do(q{DELETE FROM token WHERE data->>'email' = ? OR data->>'id' = ?}, undef, $email, $u->id);
+        $dbh->do('DELETE FROM partial_user WHERE lower(email) = lower(?)', undef, $email);
+        $did{"accounts anonymised (not used for $ACCOUNT_MONTHS months, warned)"}++;
+    } elsif (!$warned) {
+        next unless $u->email =~ /\@/;
+        unless ($dry_run) {
+            FixMyStreet::Email::send_cron($schema, 'inactive-account.txt', {
+                name => $u->name, cobrand => $cobrand, sign_in_url => $cobrand->base_url . '/auth', days => $WARN_DAYS,
+            }, { To => [ [ $u->email, $u->name ] ] }, $env, 0, $cobrand, 'el');
+        }
+        $u->set_extra_metadata(greece_inactive_warned => time);
+        $u->update;
+        $did{'accounts warned (a month before they are anonymised)'}++;
+    }
+}
+# A sign-in after the warning cancels it.
+my $back = $schema->resultset('User')->search(\[ q{extra::text LIKE '%greece_inactive_warned%'
+    AND coalesce(last_active, created) > now() - interval '1 month' * ? }, $ACCOUNT_MONTHS - 1 ]);
+while (my $u = $back->next) {
+    $u->unset_extra_metadata('greece_inactive_warned');
+    $u->update;
+    $did{'warnings cancelled (the account was used)'}++;
+}
+
+$dry_run ? $schema->txn_rollback : $schema->txn_commit;
+print scalar(localtime), ': ', (join(', ', map { "$did{$_} $_" } sort keys %did) || 'nothing to do'),
+    ($dry_run ? ' (dry run, rolled back)' : ''), "\n" if %did || $dry_run;
