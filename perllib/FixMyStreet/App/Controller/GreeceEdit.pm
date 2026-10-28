@@ -23,7 +23,8 @@ public text.
 
 Every edit is recorded in the report's extra data, greece_edits: [ { at, by, was } ]. The report page says
 «Επεξεργάστηκε από τον συντάκτη, <date and time>»; the earlier text (was) is for the moderators and the
-police, who got the first version if the report had been sent, and goes with the personal parts of the
+police, who got the first version if the report had been sent. bin/greece/retention removes each earlier
+text 90 days after the edit (the note of the edit stays); what is left goes with the personal parts of the
 report when it is anonymised (bin/greece/anonymise-old). Nothing is sent to the municipality again.
 
 =cut

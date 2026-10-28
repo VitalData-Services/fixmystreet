@@ -6,7 +6,9 @@
 #   - partial_user rows (no date column, so only when no user has that email);
 #   - alerts disabled, or never confirmed, for more than 90 days;
 #   - reports/updates never confirmed after 14 days (nobody clicked the emailed link);
-#   - uploaded photos that no report or update names after 7 days (a draft never sent).
+#   - uploaded photos that no report or update names after 7 days (a draft never sent);
+#   - the earlier texts of reports edited by their author (extra greece_edits, App::Controller::GreeceEdit):
+#     kept 90 days (owner, 2026-10-28), then only the fact of the edit, when and by whom, stays.
 # Prints what it deletes; --dry-run only counts.
 #
 # Runs inside the app container, daily from the host's cron:
@@ -73,6 +75,30 @@ for my $r (@rules) {
             push @did, "$n photos in no report or update for 7 days" if $n;
         }
     }
+}
+
+{
+    my $cutoff = time - 90 * 86400;
+    my $schema = FixMyStreet::DB->schema;
+    my $n = 0;
+    my $ids = $dbh->selectcol_arrayref(q{SELECT id FROM problem WHERE extra::text LIKE '%greece_edits%'});
+    for my $id (@$ids) {
+        my $p = $schema->resultset('Problem')->find($id) or next;
+        my $edits = $p->get_extra_metadata('greece_edits') or next;
+        my $changed = 0;
+        for my $e (@$edits) {
+            next unless exists $e->{was} && ($e->{at} || 0) < $cutoff;
+            delete $e->{was};
+            $changed++;
+        }
+        next unless $changed;
+        $n += $changed;
+        unless ($dry_run) {
+            $p->set_extra_metadata(greece_edits => $edits);
+            $p->update;
+        }
+    }
+    push @did, "$n earlier texts of edited reports older than 90 days" if $n;
 }
 
 print scalar(localtime), ': ', (join(', ', @did) || 'nothing to delete'), ($dry_run ? ' (dry run)' : ''), "\n"
