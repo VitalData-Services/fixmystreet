@@ -25,3 +25,5 @@ Subject: [% items.size %] [% items.size == 1 ? 'νέα αναφορά' : 'νέε
 στείλτε μας τη σωστή στο [% cobrand.contact_email %] γράφοντας: MAIL ΔΗΜΟΥ:ΧΧΧ@ΥΥΥ.ΖΖΖ
 
 [% signature %]
+
+[% INCLUDE '_site_footer.txt' %]
