@@ -62,5 +62,7 @@ if git -C "$dst" diff --cached --quiet; then
     echo "no changes"
     exit 0
 fi
-git -C "$dst" commit -q -m "$msg"
+# The public commits carry the project's name, not a person's (owner, 2026-10-28); the address is not a
+# GitHub account, so the commits link to no profile.
+git -C "$dst" -c user.name="VitalData Services" -c user.email="noreply@fixmystreets.gr" commit -q -m "$msg"
 git -C "$dst" show --stat --format='%h %s' HEAD | tail -n +1

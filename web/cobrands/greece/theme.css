@@ -1483,3 +1483,10 @@ a[href*="/auth/forgot"], .js-new-report-show-sign-in, .js-hide-name { display: i
 #map_sidebar .gr-terms-accept label { display: block; font-weight: 400; font-size: .9rem; line-height: 1.4; margin: 0; }
 #map_sidebar .gr-terms-accept label strong { font-weight: 400; }
 #map_sidebar .gr-terms-accept input { float: left; width: 22px; height: 22px; margin: 1px .6rem 0 0; accent-color: var(--gr-accent); }
+.gr-account-form { margin: 0 0 1.5rem; max-width: 32rem; }
+.gr-account-form h2 { margin: 0 0 .75rem; font-size: 1.1rem; }
+.gr-account-form__field { display: flex; flex-direction: column; gap: .25rem; margin: 0 0 .9rem; }
+.gr-account-form__field label { font-weight: 600; }
+.gr-account-form__field input { width: 100%; box-sizing: border-box; }
+.gr-account-form__field input[readonly] { background: var(--gr-surface-2, #f1f5f9); color: var(--gr-ink-2); }
+.gr-account-form__hint { font-size: .85rem; color: var(--gr-ink-3); }
