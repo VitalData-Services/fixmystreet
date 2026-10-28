@@ -42,6 +42,20 @@
         open = null;
     }
 
+    // The note sits under its button, kept inside the window (above the button when there is no room below).
+    function place(btn, bubble) {
+        var r = btn.getBoundingClientRect();
+        bubble.style.visibility = 'hidden';
+        bubble.hidden = false;
+        var w = bubble.offsetWidth, h = bubble.offsetHeight;
+        var left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+        var top = r.bottom + 8;
+        if (top + h > window.innerHeight - 8) { top = Math.max(8, r.top - h - 8); }
+        bubble.style.left = left + 'px';
+        bubble.style.top = top + 'px';
+        bubble.style.visibility = '';
+    }
+
     function labelFor(el) {
         if (el.matches && el.matches('label')) { return el; }
         if (el.id) {
@@ -68,6 +82,7 @@
         bubble.setAttribute('role', 'note');
         bubble.hidden = true;
         bubble.textContent = text;
+        document.body.appendChild(bubble);
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -75,13 +90,20 @@
             close();
             if (!wasOpen) {
                 btn.setAttribute('aria-expanded', 'true');
-                bubble.hidden = false;
+                place(btn, bubble);
                 open = { btn: btn, bubble: bubble };
             }
         });
         wrap.appendChild(btn);
-        wrap.appendChild(bubble);
-        label.appendChild(wrap);
+        if (label.id === 'photo-upload-label' && label.parentNode) {
+            var row = document.createElement('span');
+            row.className = 'gr-help-row';
+            label.parentNode.insertBefore(row, label);
+            row.appendChild(label);
+            row.appendChild(wrap);
+        } else {
+            label.appendChild(wrap);
+        }
     }
 
     function scan() {
@@ -91,8 +113,10 @@
         });
     }
 
-    document.addEventListener('click', function(e) { if (open && !(e.target.closest && e.target.closest('.gr-help'))) { close(); } });
+    document.addEventListener('click', function(e) { if (open && !(e.target.closest && (e.target.closest('.gr-help') || e.target.closest('.gr-help__bubble')))) { close(); } });
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { close(); } });
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
     var queued = false;
     function schedule() {
         if (queued) { return; }
