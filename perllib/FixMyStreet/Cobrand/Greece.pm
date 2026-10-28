@@ -233,6 +233,25 @@ sub extra_contact_validation {
 }
 
 # Whether the report was made without an email (filed under anonymous_account).
+# The author of a report may edit its description while the report is visible (owner, 2026-10-28;
+# App::Controller::GreeceEdit). Not a report made without signing in: it is filed under the shared
+# anonymous account, so nobody can show it is theirs.
+sub greece_may_edit {
+    my ($self, $user, $problem) = @_;
+    return 0 unless $user && $problem && $problem->user_id && $user->id == $problem->user_id;
+    return 0 if $self->greece_anonymous_report($problem);
+    return 0 if $problem->state eq 'hidden' || $problem->state eq 'unconfirmed';
+    return 1;
+}
+
+# When a report was last edited (greece_edits), as «28/10/2026 14:20» in Athens time; empty if never.
+sub greece_last_edit_when {
+    my ($self, $problem) = @_;
+    my $edits = $problem->get_extra_metadata('greece_edits') or return '';
+    my $last = $edits->[-1] or return '';
+    return DateTime->from_epoch(epoch => $last->{at}, time_zone => FixMyStreet->local_time_zone)->strftime('%d/%m/%Y %H:%M');
+}
+
 sub greece_anonymous_report {
     my ($self, $report) = @_;
     my $anon = $self->anonymous_account or return 0;
@@ -261,8 +280,7 @@ sub greece_terms_cookie {
 sub greece_terms_cookie_date {
     my ($self, $c) = @_;
     my $at = $self->greece_terms_cookie($c) or return;
-    require POSIX;
-    return POSIX::strftime('%d/%m/%Y', localtime $at);
+    return DateTime->from_epoch(epoch => $at, time_zone => FixMyStreet->local_time_zone)->strftime('%d/%m/%Y');
 }
 
 sub report_check_for_errors {

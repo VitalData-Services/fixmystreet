@@ -42,7 +42,7 @@ my %did;
 
 # What a report or update keeps in its extra data that can identify someone (phone, the full text, the privacy
 # flag's reason and contact, copies of addresses). The rest is about the report, not a person.
-my @PERSONAL_EXTRA = qw(greece_phone greece_detail_full greece_privacy_flag greece_cc greece_digest_env);
+my @PERSONAL_EXTRA = qw(greece_phone greece_detail_full greece_privacy_flag greece_cc greece_digest_env greece_edits);
 my $VIDEO_ROOT = '/var/lib/fms-videos';
 
 $schema->txn_begin;
