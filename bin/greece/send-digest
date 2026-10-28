@@ -13,7 +13,8 @@
 # not send it twice), and marks the report sent when all its addresses are done.
 #
 # An email for many reports cannot have each reporter in Cc or as Reply-To, as one report's email
-# did: their email is in the table, with «(χωρίς επιβεβαίωση)» where it was not confirmed.
+# did: their email is in the table when it was confirmed (signed in, or the emailed code); an email
+# that was not confirmed stays out, as on the single letter (Cobrand::Greece munge_sendreport_params).
 # On a staging site that does not send reports (STAGING_FLAGS send_reports 0) the emails go to the
 # site's contact address, saying where they would have gone.
 #
@@ -196,8 +197,7 @@ sub digest_item {
         address => $address,
         detail => $r->get_extra_metadata('greece_detail_full') || $r->detail,
         name => $name,
-        email => $anonymous || !$user ? '' : $user->email // '',
-        email_unconfirmed => $anonymous || $r->get_extra_metadata('greece_email_confirmed') ? 0 : 1,
+        email => $anonymous || !$user || !$r->get_extra_metadata('greece_email_confirmed') ? '' : $user->email // '',
         phone => ($user && !$anonymous ? $user->phone : '') || $r->get_extra_metadata('greece_phone') || '',
         photos => $r->photo ? scalar(grep { /\S/ } split /,/, $r->photo) : 0,
         video_seconds => $r->get_extra_metadata('greece_video_seconds') || 0,
