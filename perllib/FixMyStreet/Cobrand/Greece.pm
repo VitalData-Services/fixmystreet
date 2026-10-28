@@ -420,6 +420,18 @@ sub greece_digest_next {
     return $self->greece_t('αύριο', 'tomorrow') . ' 01:00';
 }
 
+# The admin's Users page lists every user, 20 to a page (?p=N), until a search narrows it (FixMyStreet
+# lists only the staff and admins by default). The pager is for templates/web/greece/admin/users/index.html.
+sub users_staff_admin {
+    my $self = shift;
+    my $c = $self->{c};
+    my $page = $c ? ($c->get_param('p') // 1) : 1;
+    $page = 1 unless $page =~ /^\d+$/ && $page > 0;
+    my $rs = FixMyStreet::DB->resultset('User')->search(undef, { rows => 20, page => $page });
+    $c->stash->{gr_users_pager} = $rs->pager if $c;
+    return $rs;
+}
+
 # A municipality's report waits for an admin's approval (/admin/greece/approve) before the digest sends it
 # (extra greece_approved); the police's complaints do not wait.
 sub greece_digest_body_ids {
