@@ -4,7 +4,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 
 **Controller:** VitalData Services, Περραιβού 19, Χαϊδάρι; contact falcon@fixmystreets.gr (and the contact form). The privacy page shows the same. The volunteer team that runs the service acts under the controller's instructions (`roles-agreement.md`, Art. 29). [Still to add: the legal form.]
 **Hosting:** the operator's own server (Veeam-backed hypervisor), reached through a Cloudflare Tunnel. Mail leaves through the operator's own relay.
-**Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries, no personal data sent).
+**Processors and recipients outside the operator:** Cloudflare (tunnel, CDN, Turnstile; DPA in force, see section 4), Google (only for Google sign-in), Komoot Photon (address text), OpenStreetMap Nominatim (coordinates), mySociety MapIt (boundaries; only the coordinates of a point, and only when the local lookup near a boundary or coast is uncertain). mySociety Gaze is switched off (`GAZE_URL` points to an unreachable address; the 10 km fallback applies).
 **Why a DPIA:** the service combines systematic collection of precise location, photographs of public space (faces and vehicle plates of passers-by) and optional video, and publishes part of it. That matches several criteria of the WP248 guidance and the Hellenic Data Protection Authority's list under Art. 35(4) (location and image data, and data about third parties who are not told). A DPIA is the safe course even if a single criterion would not require it.
 
 ## 1. The processing

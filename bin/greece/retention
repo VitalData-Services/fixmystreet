@@ -5,7 +5,8 @@
 #     links older than a week are dead);
 #   - partial_user rows (no date column, so only when no user has that email);
 #   - alerts disabled, or never confirmed, for more than 90 days;
-#   - reports/updates never confirmed after 14 days (nobody clicked the emailed link).
+#   - reports/updates never confirmed after 14 days (nobody clicked the emailed link);
+#   - uploaded photos that no report or update names after 7 days (a draft never sent).
 # Prints what it deletes; --dry-run only counts.
 #
 # Runs inside the app container, daily from the host's cron:
@@ -17,6 +18,7 @@ use warnings;
 
 use FixMyStreet;
 use FixMyStreet::DB;
+use Path::Tiny 'path';
 
 my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
 my $dbh = FixMyStreet::DB->schema->storage->dbh;
@@ -48,5 +50,30 @@ for my $r (@rules) {
     if (!defined $n) { push @did, "FAILED: $what ($@)"; next }
     push @did, "$n $what" if $n;
 }
+# The upload dir holds the (blurred) copy of every photo ever uploaded. One that no report and no
+# update names after a week belongs to a draft nobody sent, or to a report deleted above. If either
+# query fails, nothing is removed.
+{
+    my $cfg = FixMyStreet->config('PHOTO_STORAGE_OPTIONS') || {};
+    my $dir = path($cfg->{UPLOAD_DIR} || '../upload/')->absolute(FixMyStreet->path_to());
+    if ($dir->is_dir) {
+        my $used = eval {
+            join ',', map { @{ $dbh->selectcol_arrayref("SELECT encode(photo, 'escape') FROM $_ WHERE photo IS NOT NULL") } }
+                qw(problem comment);
+        };
+        if (!defined $used) { push @did, "FAILED: photos in no report ($@)" }
+        else {
+            my $n = 0;
+            for my $file ($dir->children(qr/\A[0-9a-f]{40}\.jpeg\z/)) {
+                next if time - $file->stat->mtime < 7 * 86400;
+                next if index($used, $file->basename) >= 0;
+                $file->remove unless $dry_run;
+                $n++;
+            }
+            push @did, "$n photos in no report or update for 7 days" if $n;
+        }
+    }
+}
+
 print scalar(localtime), ': ', (join(', ', @did) || 'nothing to delete'), ($dry_run ? ' (dry run)' : ''), "\n"
     if @did || $dry_run;

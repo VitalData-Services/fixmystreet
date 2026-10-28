@@ -1,0 +1,4 @@
+# FixMyStreets: delete the police copies of photos (plates readable) once their reports are sent.
+# bin/greece/purge-originals; output in /var/log/fixmystreets/purge-originals.log
+SHELL=/bin/sh
+*/15 * * * * debian cd /opt/fixmystreet && docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - < bin/greece/purge-originals >> /var/log/fixmystreets/purge-originals.log 2>&1

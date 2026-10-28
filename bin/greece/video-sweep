@@ -1,0 +1,42 @@
+#!/usr/bin/env perl
+# Deletes uploaded videos that the privacy page (§8) says are gone:
+#   - an upload left unfinished for a day (incoming/<id>/);
+#   - a transcoded video no report claimed after a day (ready/<id>.mp4);
+#   - a video 180 days old, claimed or not (the same GREECE video retention as
+#     App::Controller::GreeceVideo, which sweeps when someone starts an upload; this runs it on a
+#     schedule, so the promise holds on a quiet site too).
+# Prints what it deletes; --dry-run only lists.
+#
+# Runs inside the app container (the videos volume is mounted there), hourly from the host's cron:
+#   docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - [--dry-run] \
+#       < /opt/fixmystreet/bin/greece/video-sweep
+
+use strict;
+use warnings;
+
+use File::Path 'remove_tree';
+
+my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
+my $ROOT = '/var/lib/fms-videos';
+my $KEEP_DAYS = 180;
+exit 0 unless -d $ROOT;
+
+my $now = time;
+my %done;
+for my $dir (glob "$ROOT/incoming/*") {
+    next unless -d $dir && $now - (stat $dir)[9] > 86400;
+    remove_tree($dir) unless $dry_run;
+    $done{'unfinished uploads older than a day'}++;
+}
+for my $file (glob "$ROOT/ready/*.mp4") {
+    my ($id) = $file =~ m{/([0-9a-f]{32})\.mp4$} or next;
+    my $age = $now - (stat $file)[9];
+    my $claimed = -e "$ROOT/claimed/$id";
+    my $why = $age > $KEEP_DAYS * 86400 ? "videos older than $KEEP_DAYS days"
+            : (!$claimed && $age > 86400) ? 'videos no report claimed after a day'
+            : next;
+    unlink $file, "$ROOT/claimed/$id" unless $dry_run;
+    $done{$why}++;
+}
+print scalar(localtime), ': ', (join(', ', map { "$done{$_} $_" } sort keys %done) || 'nothing to delete'),
+    ($dry_run ? ' (dry run)' : ''), "\n" if %done || $dry_run;

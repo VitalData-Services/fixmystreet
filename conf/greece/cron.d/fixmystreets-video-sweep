@@ -1,0 +1,5 @@
+# FixMyStreets: delete unfinished, unclaimed and 180-day-old videos on a schedule (bin/greece/video-sweep),
+# not only when someone starts an upload. Output in /var/log/fixmystreets/video-sweep.log
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-video-sweep /etc/cron.d/
+SHELL=/bin/sh
+17 * * * * debian cd /opt/fixmystreet && docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - < bin/greece/video-sweep >> /var/log/fixmystreets/video-sweep.log 2>&1
