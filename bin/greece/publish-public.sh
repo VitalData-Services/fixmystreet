@@ -54,6 +54,9 @@ for p in $PATHS; do
     git -C "$src" ls-files -z -- "$p" | (cd "$src" && xargs -0 -r cp --parents -t "$dst")
 done
 
+# The admin's runbook (procedures, server paths, who to ask) is not part of what visitors are served.
+rm -f "$dst/templates/web/greece/admin/greece_handbook.html"
+
 # Nothing private may leave: stop on addresses, keys or hosts of the deployment.
 if grep -rIl -E 'BEGIN [A-Z ]*PRIVATE KEY|@fixmystreets\.gr|uns\.gr|vitaldata|kouak|10\.0\.201\.|192\.168\.' \
         $(for p in $PATHS; do echo "$dst/$p"; done) 2>/dev/null; then
