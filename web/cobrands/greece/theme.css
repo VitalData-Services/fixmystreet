@@ -1580,3 +1580,10 @@ body.gr-dragging { user-select: none; -webkit-user-select: none; cursor: col-res
 .gr-crop__mark { position: absolute; box-sizing: border-box; border: 2px dashed #fff; }
 .gr-crop__mark--blur { background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .55) 0 6px, rgba(120, 130, 150, .55) 6px 12px); }
 .gr-crop__mark--black { background: rgba(0, 0, 0, .9); }
+
+/* The photo dialog on a phone: all of it reachable (the buttons were below the window). */
+.gr-crop { max-height: calc(100dvh - 16px); overflow-y: auto; }
+.gr-crop .gr-crop__img { max-height: min(46vh, 480px); }
+
+/* The crop frame and the marks are measured from the photo's own corner: the stage is as wide as the photo, not as the dialog. */
+.gr-crop .gr-crop__stage { display: block; width: fit-content; max-width: 100%; margin: 0 auto; }

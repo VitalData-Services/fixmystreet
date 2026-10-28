@@ -34,6 +34,9 @@
             'The text of the report as it is shown publicly. Only fix spelling or remove personal data; otherwise leave it as the citizen wrote it.']
     ];
 
+    // Only on the staff pages: the inspector panel of a report and the admin pages. A citizen's report form has none.
+    function staffPage() { return !!document.getElementById('report_inspect_form') || /^\/admin\//.test(location.pathname); }
+
     var open = null;
     function close() {
         if (!open) { return; }
@@ -107,6 +110,7 @@
     }
 
     function scan() {
+        if (!staffPage()) { return; }
         HELP.forEach(function(h) {
             var el = document.querySelector(h[0]);
             if (el) { attach(el, t(h[1], h[2])); }
