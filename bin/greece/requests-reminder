@@ -1,0 +1,51 @@
+#!/usr/bin/env perl
+# Daily: emails the contact address the rights requests (the request desk, /admin/greece/requests) that are
+# still open and due in 7 days or less, or already late. Nothing is sent when there are none. The email names
+# the kind and the deadline, not the citizen. --dry-run only prints.
+#
+# Runs inside the app container, daily from the host's cron (conf/greece/cron.d/fixmystreets-requests-reminder):
+#   docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - [--dry-run] \
+#       < /opt/fixmystreet/bin/greece/requests-reminder
+
+use strict;
+use warnings;
+use utf8;
+
+use FixMyStreet;
+use FixMyStreet::DB;
+use FixMyStreet::Cobrand;
+use FixMyStreet::Email;
+
+binmode STDOUT, ':utf8';
+my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
+
+my %KINDS = (
+    access => 'Πρόσβαση / αντίγραφο', erase => 'Διαγραφή', rectify => 'Διόρθωση', object => 'Ένσταση / περιορισμός',
+    recall => 'Ανάκληση από δήμο ή αστυνομία', privacy => 'Απόκρυψη για ιδιωτικότητα', notice => 'Αναφορά περιεχομένου',
+);
+
+my $schema = FixMyStreet::DB->schema;
+my $cobrand = FixMyStreet::Cobrand->get_class_for_moniker('greece')->new;
+$cobrand->set_lang_and_domain('el', 1);
+$schema->cobrand($cobrand);
+
+my $today = "(now() at time zone 'Europe/Athens')::date";
+my $rows = $schema->storage->dbh->selectall_arrayref(
+    "SELECT id, kind, to_char(due, 'DD/MM/YYYY') AS due, (due - $today) AS days_left
+       FROM greece_request WHERE status <> 'answered' AND due <= $today + 7 ORDER BY days_left, id", { Slice => {} });
+unless (@$rows) {
+    print scalar(localtime), ": no request is due within 7 days\n";
+    exit 0;
+}
+my $late = 0;
+for my $r (@$rows) {
+    $r->{label} = $KINDS{ $r->{kind} } // $r->{kind};
+    $late++ if $r->{days_left} < 0;
+}
+print scalar(localtime), ': ', scalar(@$rows), " request(s) due within 7 days, $late late", ($dry_run ? ' (dry run)' : ''), "\n";
+exit 0 if $dry_run;
+
+my $env = 'fms-requests@' . (FixMyStreet->config('EMAIL_DOMAIN') || 'fixmystreets.gr');
+FixMyStreet::Email::send_cron($schema, 'requests-due.txt', {
+    items => $rows, late => $late, cobrand => $cobrand, url => $cobrand->base_url . '/admin/greece/requests',
+}, { To => [ [ $cobrand->contact_email, $cobrand->contact_name ] ] }, $env, 0, $cobrand, 'el');

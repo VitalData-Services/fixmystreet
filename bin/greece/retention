@@ -101,5 +101,12 @@ for my $r (@rules) {
     push @did, "$n earlier texts of edited reports older than 90 days" if $n;
 }
 
+{
+    # Answered rights requests (the request desk): the record is kept 3 years after the answer.
+    my $q = q{greece_request WHERE answered < now() - interval '3 years'};
+    my $n = $dry_run ? ($dbh->selectrow_array("SELECT count(*) FROM $q"))[0] : $dbh->do("DELETE FROM $q") + 0;
+    push @did, "$n answered rights requests older than 3 years" if $n;
+}
+
 print scalar(localtime), ': ', (join(', ', @did) || 'nothing to delete'), ($dry_run ? ' (dry run)' : ''), "\n"
     if @did || $dry_run;

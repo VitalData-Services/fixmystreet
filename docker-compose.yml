@@ -73,6 +73,7 @@ services:
       # An admin approves the municipalities' reports before the digest sends them (/admin/greece/approve).
       - ./perllib/FixMyStreet/App/Controller/GreeceApprove.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceApprove.pm
       - ./perllib/FixMyStreet/App/Controller/GreeceHandbook.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceHandbook.pm
+      - ./perllib/FixMyStreet/App/Controller/GreeceRequests.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceRequests.pm
       - ./perllib/FixMyStreet/App/Controller/GreeceAccount.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceAccount.pm:ro
       - ./perllib/FixMyStreet/App/Controller/GreeceEdit.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceEdit.pm:ro
       # Hide a report at once when someone flags a privacy problem (/greece/privacy/<id>).

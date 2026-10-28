@@ -65,3 +65,7 @@ Other points assessed:
 ## 5. Conclusion
 
 With the measures above the processing is necessary and proportionate for a small service in the public interest, and the overall residual risk is **medium**. No prior consultation with the Authority under Art. 36 is needed, because no high residual risk remains once the open measures are done. Review this document when a new data flow is added (for example a connection to another reporting platform), after any security incident, and at least once a year.
+
+### Rights requests desk (2026-10-29)
+
+A small table of requests (email, kind, dates, note) kept 3 years after the answer, readable by superusers only; the reminder email carries no personal data. Risk: low; it lowers the risk of a missed deadline.

@@ -1,0 +1,116 @@
+[%# One request: the facts, the next step for its kind, the buttons and the reply text (App::Controller::GreeceRequests). ~%]
+[% INCLUDE 'admin/header.html' title = 'Αίτημα ' _ r.id %]
+<p class="sm"><a href="[% c.uri_for('/admin/greece/requests') %]">← Όλα τα αιτήματα</a></p>
+<h1>Αίτημα [% r.id %]: [% r.kind_label | html %]</h1>
+
+<table class="table">
+<tr><th>Πολίτης</th><td>[% r.email | html %]</td></tr>
+<tr><th>Πήρα</th><td>[% r.received %]</td></tr>
+<tr><th>Προθεσμία</th><td><strong>[% r.due %]</strong> · [% r.badge | html %]
+    [% IF r.extended_reason %]<br><small>Παράταση: [% r.extended_reason | html %]</small>[% END %]</td></tr>
+<tr><th>Κατάσταση</th><td>[% r.status_label | html %]</td></tr>
+[% IF r.report_ref %]<tr><th>Αναφορά</th><td>[% r.report_ref | html %]</td></tr>[% END %]
+</table>
+
+<h2>Τι κάνω</h2>
+<ol>
+[% IF r.kind == 'access' %]
+<li>Βεβαιώσου ότι το αίτημα ήρθε από το email του λογαριασμού (αλλιώς ζήτα επιβεβαίωση από εκείνο).</li>
+<li>Στον server: <code>dsar export [% r.email | html %]</code> (εντολή στο εγχειρίδιο). Δες το αρχείο: κρύψε στοιχεία άλλων προσώπων.</li>
+<li>Στείλε το αρχείο στο email του λογαριασμού, σβήσε το από τον server, πάτα «Απαντήθηκε».</li>
+[% ELSIF r.kind == 'erase' %]
+<li>Βεβαιώσου ότι το αίτημα ήρθε από το email του λογαριασμού.</li>
+<li>Στον server: πρώτα <code>dsar erase [% r.email | html %]</code> (δοκιμή), δες τι θα γίνει, και μετά με <code>--commit</code>. Φωτογραφίες και βίντεο δεν σβήνονται μόνα τους: κοίτα τα.</li>
+<li>Απάντησε (το κείμενο παρακάτω) και πάτα «Απαντήθηκε».</li>
+[% ELSIF r.kind == 'rectify' %]
+<li>Διόρθωση περιγραφής: ο ίδιος από τη σελίδα της αναφοράς, ή εσύ από το <code>/admin/report_edit/&lt;αριθμός&gt;</code>. Όνομα και τηλέφωνο: από «Οι αναφορές μου».</li>
+<li>Απάντησε και πάτα «Απαντήθηκε».</li>
+[% ELSIF r.kind == 'object' %]
+<li>Κρύψε την αναφορά ώσπου να αποφασίσεις (<code>/admin/report_edit/&lt;αριθμός&gt;</code>).</li>
+<li>Αποφάσισε: αν δεν είσαι σίγουρος, ρώτα τον δικηγόρο. Απάντησε εντός της προθεσμίας.</li>
+[% ELSIF r.kind == 'recall' %]
+<li>Δεν μπορούμε να ανακαλέσουμε email που παραδόθηκε: ο δήμος ή η αστυνομία είναι υπεύθυνοι για τα στοιχεία από τη στιγμή που τα παίρνουν.</li>
+<li>Κρύψε ή σβήσε το δικό μας αντίγραφο. Αν το ζητήσει ο πολίτης, γράψε κι εσύ στον φορέα και ζήτα διαγραφή.</li>
+<li>Απάντησε (το κείμενο παρακάτω) και πάτα «Απαντήθηκε».</li>
+[% ELSIF r.kind == 'privacy' %]
+<li>Άνοιξε την αναφορά (<code>/admin/report_edit/&lt;αριθμός&gt;</code>) και δες τι δείχνει.</li>
+<li>Διόρθωσε ή άφησέ την κρυμμένη· ή επανέφερέ την αν δεν υπάρχει τίποτα ευαίσθητο.</li>
+<li>Απάντησε και πάτα «Απαντήθηκε».</li>
+[% ELSE %]
+<li>Βρες την αναφορά και κρίνε αν παραβιάζει τους όρους (§5) ή τον νόμο· αν ναι, κρύψε την ή αφαίρεσε το περιεχόμενο.</li>
+<li>Ενημέρωσε αυτόν που ειδοποίησε, με σύντομη αιτιολόγηση, και κράτα σημείωση.</li>
+[% END %]
+</ol>
+
+[%# The reply: subject and body, with what is known already filled in. ~%]
+[% ref = r.report_ref ? r.report_ref : '[ΑΡΙΘΜΟΣ ΑΝΑΦΟΡΑΣ]' %]
+[% subject = BLOCK %]
+[%~ IF r.kind == 'access' %]Το αίτημά σου για τα στοιχεία σου
+[%~ ELSIF r.kind == 'erase' %]Το αίτημα διαγραφής σου
+[%~ ELSIF r.kind == 'recall' %]Το αίτημά σου για την αναφορά [% ref %]
+[%~ ELSIF r.kind == 'privacy' %]Η αναφορά σου και η ιδιωτικότητα
+[%~ ELSE %]Το αίτημά σου
+[%~ END %]
+[% END %]
+[% body = BLOCK %]
+Καλησπέρα,
+
+[% IF r.kind == 'access' ~%]
+Σου στέλνουμε συνημμένα όσα κρατάμε για εσένα (αναφορές, ενημερώσεις, στοιχεία λογαριασμού). Δεν περιλαμβάνεται ο κωδικός πρόσβασης. Αν κάτι λείπει ή είναι λάθος, γράψε μας.
+[% ELSIF r.kind == 'erase' ~%]
+Ανωνυμοποιήσαμε τον λογαριασμό σου και αφαιρέσαμε το όνομα και το τηλέφωνο από τις αναφορές σου. Οι αναφορές παραμένουν στον χάρτη χωρίς στοιχεία σου. Ό,τι έχει ήδη σταλεί σε δήμο ή αστυνομία δεν μπορούμε να το ανακαλέσουμε.
+[% ELSIF r.kind == 'recall' ~%]
+Η αναφορά [% ref %] στάλθηκε στον [ΔΗΜΟ / ΑΣΤΥΝΟΜΙΑ] στις [ΗΜΕΡΟΜΗΝΙΑ]. Από εκείνη τη στιγμή τα στοιχεία της τα διαχειρίζεται η υπηρεσία που τη λαμβάνει και δεν μπορούμε να τα ανακαλέσουμε.
+Κρύψαμε/διαγράψαμε το δικό μας αντίγραφο. Για το αντίγραφο της υπηρεσίας, επικοινώνησε μαζί της: [ΔΙΕΥΘΥΝΣΗ ΕΠΙΚΟΙΝΩΝΙΑΣ ΤΗΣ ΥΠΗΡΕΣΙΑΣ].
+[% ELSIF r.kind == 'privacy' ~%]
+Κρύψαμε την αναφορά [% ref %] από το κοινό και την ελέγξαμε.
+[ΕΠΙΛΕΞΕ ΜΙΑ: Διορθώσαμε το κείμενο/τη φωτογραφία και την ξαναδημοσιεύσαμε. | Την αφήσαμε κρυμμένη. | Δεν βρήκαμε κάτι που να χρειάζεται απόκρυψη και την ξαναδημοσιεύσαμε.]
+Ό,τι έχει ήδη σταλεί στον δήμο ή στην αστυνομία δεν μπορούμε να το ανακαλέσουμε· μπορείς να τους ζητήσεις απευθείας διόρθωση ή διαγραφή.
+[% ELSIF r.kind == 'rectify' ~%]
+Διορθώσαμε [ΤΙ ΑΛΛΑΞΕ] στα στοιχεία/την αναφορά [% ref %]. Αν κάτι δεν είναι σωστό ακόμα, γράψε μας.
+[% ELSIF r.kind == 'object' ~%]
+Λάβαμε την ένστασή σου. [ΤΙ ΑΠΟΦΑΣΙΣΑΜΕ ΚΑΙ ΓΙΑΤΙ]
+[% ELSE ~%]
+Ελέγξαμε την αναφορά [% ref %]. [ΤΙ ΑΠΟΦΑΣΙΣΑΜΕ ΚΑΙ ΓΙΑΤΙ]
+[% END %]
+
+Ομάδα [% site_name || 'FixMyStreets' %]
+[% END %]
+
+<h2>Κείμενο απάντησης</h2>
+<p class="sm">Συμπλήρωσε ό,τι είναι σε [αγκύλες]. Από το κουμπί ανοίγει το πρόγραμμα email σου· στείλε από το [% c.cobrand.contact_email | html %]
+(ή αντίγραψε το κείμενο).</p>
+<p><strong>Θέμα:</strong> [% subject | html %]</p>
+<pre>[% body.replace('^\s+', '') | html %]</pre>
+<p><a class="btn btn--primary" href="mailto:[% r.email | uri %]?subject=[% subject | uri %]&amp;body=[% body.replace('^\s+', '') | uri %]">Άνοιγμα στο email</a></p>
+
+<h2>Κατάσταση</h2>
+<form method="post" action="[% c.uri_for('/admin/greece/requests', r.id) %]">
+    <input type="hidden" name="token" value="[% csrf_token %]">
+    <input type="hidden" name="action" value="status">
+    <p>[% FOR s IN statuses %]<button type="submit" name="status" value="[% s.key %]" class="btn[% ' btn--primary' IF s.key == 'answered' %]">[% s.label | html %]</button> [% END %]</p>
+</form>
+
+<h2>Σημείωση</h2>
+<form method="post" action="[% c.uri_for('/admin/greece/requests', r.id) %]">
+    <input type="hidden" name="token" value="[% csrf_token %]">
+    <input type="hidden" name="action" value="note">
+    <p><label for="gr-rq-ref">Αριθμός αναφοράς</label>
+    <input type="text" name="report_ref" id="gr-rq-ref" class="form-control" maxlength="40" value="[% r.report_ref | html %]"></p>
+    <p><label for="gr-rq-note">Σημείωση</label>
+    <textarea name="note" id="gr-rq-note" class="form-control" rows="4" maxlength="2000">[% r.note | html %]</textarea></p>
+    <p><button type="submit" class="btn">Αποθήκευση</button></p>
+</form>
+
+[% IF NOT r.extended_reason AND r.status != 'answered' %]
+<h2>Παράταση</h2>
+<p class="sm">Αν το αίτημα είναι πολύπλοκο, η προθεσμία πάει στους <strong>3 μήνες</strong> από την ημέρα που το πήρες. Μπορεί να γίνει <strong>μία φορά</strong>, με λόγο, και πρέπει να το πεις στον πολίτη μέσα στον πρώτο μήνα.</p>
+<form method="post" action="[% c.uri_for('/admin/greece/requests', r.id) %]">
+    <input type="hidden" name="token" value="[% csrf_token %]">
+    <input type="hidden" name="action" value="extend">
+    <p><label for="gr-rq-reason">Λόγος</label>
+    <input type="text" name="reason" id="gr-rq-reason" class="form-control" maxlength="500" required></p>
+    <p><button type="submit" class="btn">Παράταση σε 3 μήνες</button></p>
+</form>
+[% END %]
+[% INCLUDE 'admin/footer.html' %]

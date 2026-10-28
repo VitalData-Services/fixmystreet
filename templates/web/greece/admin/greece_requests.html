@@ -1,0 +1,49 @@
+[%# The request desk: the list and the form for a new request (App::Controller::GreeceRequests). ~%]
+[% INCLUDE 'admin/header.html' title = 'Αιτήματα πολιτών' %]
+<h1>Αιτήματα πολιτών</h1>
+<p>Αιτήματα για τα στοιχεία τους (πρόσβαση, διαγραφή, διόρθωση…). Η προθεσμία είναι <strong>1 μήνας</strong> από
+την ημέρα που το παίρνεις. Τι κάνω σε κάθε περίπτωση:
+<a href="[% c.uri_for('/admin/greece/handbook') %]">εγχειρίδιο διαχειριστή</a>.</p>
+
+<h2>Νέο αίτημα</h2>
+[% IF error %]<p class="form-error" role="alert">[% error | html %]</p>[% END %]
+<form method="post" action="[% c.uri_for('/admin/greece/requests') %]">
+    <input type="hidden" name="token" value="[% csrf_token %]">
+    <p><label for="gr-rq-kind">Είδος</label>
+    <select name="kind" id="gr-rq-kind" class="form-control" required>
+        <option value="">— διάλεξε —</option>
+        [% FOR k IN kinds %]<option value="[% k.key %]"[% ' selected' IF form.kind == k.key %]>[% k.label | html %]</option>[% END %]
+    </select></p>
+    <p><label for="gr-rq-email">Email του πολίτη</label>
+    <input type="email" name="email" id="gr-rq-email" class="form-control" required maxlength="200" value="[% form.email | html %]"></p>
+    <p><label for="gr-rq-ref">Αριθμός αναφοράς (αν υπάρχει)</label>
+    <input type="text" name="report_ref" id="gr-rq-ref" class="form-control" maxlength="40" value="[% form.report_ref | html %]" placeholder="20261028-04"></p>
+    <p><label for="gr-rq-rec">Ημερομηνία που το πήρες (αν δεν είναι σήμερα)</label>
+    <input type="date" name="received" id="gr-rq-rec" class="form-control" value="[% form.received | html %]"></p>
+    <p><label for="gr-rq-note">Σημείωση (προαιρετικά)</label>
+    <textarea name="note" id="gr-rq-note" class="form-control" rows="3" maxlength="2000">[% form.note | html %]</textarea></p>
+    <p><button type="submit" class="btn btn--primary">Καταχώριση</button></p>
+</form>
+
+<h2>Ανοιχτά και πρόσφατα</h2>
+[% IF requests.size %]
+<table class="table">
+<thead><tr><th>#</th><th>Είδος</th><th>Πολίτης</th><th>Πήρα</th><th>Προθεσμία</th><th>Κατάσταση</th></tr></thead>
+<tbody>
+[% FOR r IN requests %]
+<tr>
+    <td><a href="[% c.uri_for('/admin/greece/requests', r.id) %]">[% r.id %]</a></td>
+    <td>[% r.kind_label | html %][% IF r.report_ref %]<br><small>[% r.report_ref | html %]</small>[% END %]</td>
+    <td>[% r.email | html %]</td>
+    <td>[% r.received %]</td>
+    <td>[% r.due %]<br><small>[% r.badge | html %]</small></td>
+    <td>[% r.status_label | html %]</td>
+</tr>
+[% END %]
+</tbody>
+</table>
+[% ELSE %]
+<p>Δεν υπάρχουν αιτήματα.</p>
+[% END %]
+<p class="sm">Τα αιτήματα που έχουν απαντηθεί σβήνονται μόνα τους 3 χρόνια μετά την απάντηση.</p>
+[% INCLUDE 'admin/footer.html' %]

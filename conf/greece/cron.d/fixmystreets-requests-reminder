@@ -1,0 +1,6 @@
+# FixMyStreets: every morning, tell the contact address which rights requests are due in 7 days or less or late
+# (bin/greece/requests-reminder; the request desk, /admin/greece/requests). Nothing is sent when none is.
+# Output in /var/log/fixmystreets/requests-reminder.log. The host's clock is UTC: 06:00 is 08:00 (winter) or 09:00 (summer) in Athens.
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-requests-reminder /etc/cron.d/
+SHELL=/bin/sh
+0 6 * * * debian cd /opt/fixmystreet && docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - < bin/greece/requests-reminder >> /var/log/fixmystreets/requests-reminder.log 2>&1

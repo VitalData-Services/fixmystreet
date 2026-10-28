@@ -56,6 +56,7 @@ done
 
 # The admin's runbook (procedures, server paths, who to ask) is not part of what visitors are served.
 rm -f "$dst/templates/web/greece/admin/greece_handbook.html"
+rm -f "$dst/templates/web/greece/admin/greece_requests.html" "$dst/templates/web/greece/admin/greece_request.html"
 
 # Nothing private may leave: stop on addresses, keys or hosts of the deployment.
 if grep -rIl -E 'BEGIN [A-Z ]*PRIVATE KEY|@fixmystreets\.gr|uns\.gr|vitaldata|kouak|10\.0\.201\.|192\.168\.' \

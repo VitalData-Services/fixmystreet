@@ -34,3 +34,9 @@ Special categories (Art. 9): none are requested. Photos may show people by accid
 ## Counts used in the DPIA (2026-10-26 snapshot, to recheck before quoting)
 
 Confirmed municipal contact addresses: 2 637 (332 inactive and 362 deleted ones are not used). Email-verified users: 7. Reports: all earlier test reports were deleted on 2026-10-27.
+
+## Rights requests desk (added 2026-10-29)
+
+Purpose: answer data-subject requests (GDPR Art. 15-21), recalls, privacy flags and content notices within the legal deadline.
+Data: the requester's email, the kind of request, the report number, dates, status, a note of the admin, who handled it. Legal basis: legal obligation (Art. 6(1)(c)).
+Access: superusers only (`/admin/greece/requests`). Retention: the record is deleted 3 years after the answer (`bin/greece/retention`); the daily reminder email names the kind and the deadline, not the citizen.

@@ -4,6 +4,10 @@ Private (docs/ is not published to the public fork). Owner decisions are dated. 
 
 ## Next: the request desk («Γραφείο αιτημάτων»)
 
+**Status (2026-10-29): phase 1 is built** (`/admin/greece/requests`: the table `greece_request`, the list with deadlines, new request,
+request page with the reply text filled in, status, note, one extension; `bin/greece/requests-reminder` and its cron file; retention of
+answered requests after 3 years). Phases 2 and 3 below are still to do.
+
 **Goal (owner, 2026-10-28):** answering a citizen's request must be very simple. Today the admin handbook
 (`/admin/greece/handbook`) says what to do; the desk does it with a few clicks and never lets a deadline pass.
 
