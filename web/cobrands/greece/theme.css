@@ -1477,3 +1477,4 @@ a[href*="/auth/forgot"], .js-new-report-show-sign-in, .js-hide-name { display: i
 .gr-front-cols__recent .gr-howto h3 { font-size: 1.1rem; font-weight: 700; color: var(--gr-ink); margin: .25rem 0 0; }
 .gr-submit-note { margin: .5rem 0 .75rem; font-size: .85rem; color: var(--gr-ink-3); }
 .gr-stages { font-size: .9rem; color: var(--gr-ink-2); max-width: 60ch; }
+.gr-privacy-flag { margin-top: 1rem; font-size: .85rem; }

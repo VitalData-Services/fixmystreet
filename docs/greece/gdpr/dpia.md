@@ -30,7 +30,7 @@ Version 3, 2026-10-27. Internal document, not published. Reviewed by three indep
 
 | # | Risk | Likelihood / impact | Measures in place | Residual |
 |---|---|---|---|---|
-| 1 | A reporter or a resident is re-identified from point, photo and time | Medium / Medium | Anonymous by default; name public only on opt-in; email and phone never shown; faces and plates blurred before storing | Medium |
+| 1 | A reporter or a resident is re-identified from point, photo and time | Medium / Medium | Anonymous by default; name public only on opt-in; email and phone never shown; faces and plates blurred before storing; anyone can hide a report from the public at once from its page (`/greece/privacy/<id>`), and an administrator then reviews it | Medium |
 | 2 | A plate or face stays readable | Medium / High | The anonymiser runs on every photo from the report and update forms, which are converted to JPEG before storage (the fallback in `PhotoSet` stores the original only if conversion itself fails). Police copy deleted when sent, at most after 30 days (`bin/greece/purge-originals`). Plates in descriptions masked on the public page | Low to medium |
 | 3 | A plate read by OCR is stored | Medium / Medium | The raw OCR text lives only in the upload request. If the reporter accepts it, the plate is saved in the answer `pinakida` in `problem.extra` and goes to the police letter; it is not shown publicly | Low |
 | 4 | Nudity or other unsuitable images are published | Low / High | NudeNet check on every JPEG; flagged reports are held for a moderator; bad-word moderation | Low |
