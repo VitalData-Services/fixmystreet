@@ -3,7 +3,7 @@
 
 <h1>Privacy policy</h1>
 <p class="gr-terms__lead">In plain words: what we need, where it goes, and what you can ask for.</p>
-<p class="gr-terms__date">Last updated: 26 October 2026</p>
+<p class="gr-terms__date">Last updated: 28 October 2026</p>
 
 <h2 id="who">1. Who is responsible</h2>
 <p>The controller is [% c.config.GREECE_CONTROLLER_NAME | html %][% IF c.config.GREECE_CONTROLLER_ADDRESS %] ([% c.config.GREECE_CONTROLLER_ADDRESS | html %])[% END %]. The team of volunteers that runs [% site_name %] acts under the instructions of [% c.config.GREECE_CONTROLLER_NAME | html %]. To exercise your rights you can contact [% c.config.GREECE_CONTROLLER_NAME | html %] or use the <a href="/contact">contact form</a>. For any
@@ -55,6 +55,7 @@ police or the municipality.</p>
 <ul>
     <li>a sign-in cookie, while you are signed in;</li>
     <li>a cookie with a random identifier, so your vote (👍/👎) on a report counts once;</li>
+    <li>a cookie (<code>gr_terms</code>, one year) that remembers you accepted the terms of use, so we do not ask on every report. With each report we also keep which version of the terms you accepted and when (needed as proof of the acceptance);</li>
     <li>the draft of the report you are writing, only in your browser, so it is not lost if you leave by mistake;
         it is cleared once the report is sent;</li>
     <li>whatever the Cloudflare Turnstile security check needs.</li>

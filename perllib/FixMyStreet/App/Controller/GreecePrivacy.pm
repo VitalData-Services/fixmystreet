@@ -50,7 +50,9 @@ sub flag : Path('/greece/privacy') : Args(1) {
 
     $c->stash->{reason} = $reason;
     $c->stash->{contact} = $contact;
-    $c->stash->{ip} = $c->req->address;
+    # Behind the Cloudflare tunnel the connection comes from the docker gateway (172.18.0.1); the visitor's
+    # address is in this header.
+    $c->stash->{ip} = $c->req->header('CF-Connecting-IP') // $c->req->address;
     $c->stash->{admin_url} = $c->cobrand->base_url . '/admin/report_edit/' . $id;
     $c->send_email('greece-privacy-flag.txt', {
         to => [ [ $c->cobrand->contact_email, $c->cobrand->contact_name ] ],

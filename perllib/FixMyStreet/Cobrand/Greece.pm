@@ -242,6 +242,29 @@ sub greece_anonymous_report {
 # The report form has no title field, only the description (templates/web/greece/report/new/
 # form_report.html). The title is the category, which is what lists, the report page and the
 # emails to the body show above the description; for «Άλλα» it is the start of the description.
+# The version of the terms the reporter accepts: the date at the top of the terms page. Change it
+# when the terms change, and the box is asked again.
+sub greece_terms_version { '2026-10-28' }
+
+# A reporter who ticked the box keeps a cookie «gr_terms» = <terms version>|<time> for a year, so the box
+# is not asked again on every report. It is only a convenience: the proof is the record kept on each
+# report (extra greece_terms), not the cookie. Returns the time it was set, or undef when the cookie is
+# missing or is for an older version of the terms.
+sub greece_terms_cookie {
+    my ($self, $c) = @_;
+    my $cookie = $c->req->cookie('gr_terms') or return;
+    my ($version, $at) = $cookie->value =~ /^(\d{4}-\d\d-\d\d)\|(\d+)$/ or return;
+    return $version eq $self->greece_terms_version ? $at : undef;
+}
+
+# The date, for the form, of the acceptance the cookie remembers.
+sub greece_terms_cookie_date {
+    my ($self, $c) = @_;
+    my $at = $self->greece_terms_cookie($c) or return;
+    require POSIX;
+    return POSIX::strftime('%d/%m/%Y', localtime $at);
+}
+
 sub report_check_for_errors {
     my ($self, $c) = @_;
     my $report = $c->stash->{report};
@@ -260,7 +283,7 @@ sub report_check_for_errors {
     }
     $more{turnstile} = $self->greece_turnstile_error unless $self->greece_turnstile_ok($c);
     # The terms are accepted with the report (an unticked box on the form).
-    $more{greece_terms} = $self->greece_t('Για να στείλεις την αναφορά, αποδέξου τους όρους.', 'To send the report, accept the terms.') unless $c->get_param('greece_terms');
+    $more{greece_terms} = $self->greece_t('Για να στείλεις την αναφορά, αποδέξου τους όρους.', 'To send the report, accept the terms.') unless $c->get_param('greece_terms') || $self->greece_terms_cookie($c);
     # Its own key: FixMyStreet drops errors under «name» for anonymous reports (Report/New.pm).
     my $name_error = $self->greece_name_error($c->get_param('name'));
     $name_error = $self->greece_t('Χωρίς φωτογραφία, γράψε το όνομά σου (τουλάχιστον 4 χαρακτήρες). Ανώνυμα γίνεται μόνο με φωτογραφία.',
@@ -337,6 +360,20 @@ sub disable_login_for_email {
 sub report_new_munge_before_insert {
     my ($self, $report) = @_;
     my $c = $self->{c};
+    if ($c) {
+        # What was accepted, when, and how: the record that goes with the report (privacy page §6, terms §8).
+        my $ticked = $c->get_param('greece_terms') ? 1 : 0;
+        my $earlier = $self->greece_terms_cookie($c);
+        my $now = time;
+        $report->set_extra_metadata(greece_terms => {
+            version => $self->greece_terms_version,
+            at => $now,
+            via => $ticked ? 'box' : 'cookie',
+            ($ticked || !$earlier ? () : (first_accepted => $earlier)),
+        });
+        $c->res->cookies->{gr_terms} = { value => $self->greece_terms_version . '|' . ($ticked ? $now : ($earlier || $now)),
+            expires => '+1y', path => '/', secure => 1, httponly => 1 };
+    }
     if ($c && !$c->user_exists && $c->stash->{contributing_as_anonymous_user}) {
         # FixMyStreet put the shared account's name on the report; keep what was typed instead.
         my $name = $c->get_param('name') // '';
