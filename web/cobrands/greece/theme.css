@@ -1480,3 +1480,6 @@ a[href*="/auth/forgot"], .js-new-report-show-sign-in, .js-hide-name { display: i
 .gr-privacy-flag { margin-top: 1rem; font-size: .85rem; }
 .gr-terms-accept { margin: .75rem 0 .5rem; font-size: .9rem; color: var(--gr-ink-2); }
 .gr-terms-accept input { margin-right: .5rem; }
+#map_sidebar .gr-terms-accept label { display: block; font-weight: 400; font-size: .9rem; line-height: 1.4; margin: 0; }
+#map_sidebar .gr-terms-accept label strong { font-weight: 400; }
+#map_sidebar .gr-terms-accept input { float: left; width: 22px; height: 22px; margin: 1px .6rem 0 0; accent-color: var(--gr-accent); }
