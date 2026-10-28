@@ -259,6 +259,8 @@ sub report_check_for_errors {
             'To send the video, enter your email and confirm it with the code we send you.') unless $ok;
     }
     $more{turnstile} = $self->greece_turnstile_error unless $self->greece_turnstile_ok($c);
+    # The terms are accepted with the report (an unticked box on the form).
+    $more{greece_terms} = $self->greece_t('Για να στείλεις την αναφορά, αποδέξου τους όρους.', 'To send the report, accept the terms.') unless $c->get_param('greece_terms');
     # Its own key: FixMyStreet drops errors under «name» for anonymous reports (Report/New.pm).
     my $name_error = $self->greece_name_error($c->get_param('name'));
     $name_error = $self->greece_t('Χωρίς φωτογραφία, γράψε το όνομά σου (τουλάχιστον 4 χαρακτήρες). Ανώνυμα γίνεται μόνο με φωτογραφία.',

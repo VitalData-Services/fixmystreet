@@ -1478,3 +1478,5 @@ a[href*="/auth/forgot"], .js-new-report-show-sign-in, .js-hide-name { display: i
 .gr-submit-note { margin: .5rem 0 .75rem; font-size: .85rem; color: var(--gr-ink-3); }
 .gr-stages { font-size: .9rem; color: var(--gr-ink-2); max-width: 60ch; }
 .gr-privacy-flag { margin-top: 1rem; font-size: .85rem; }
+.gr-terms-accept { margin: .75rem 0 .5rem; font-size: .9rem; color: var(--gr-ink-2); }
+.gr-terms-accept input { margin-right: .5rem; }
