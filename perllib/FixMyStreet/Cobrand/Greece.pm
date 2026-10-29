@@ -1211,20 +1211,23 @@ sub greece_recipients {
 }
 
 
-# The street number of the spot, for the police text: { number }. The one the reporter gave (question
-# "arithmos"); else the one the map gives; else, where an Apple Maps key is set (APPLE_MAPS_* in the
-# configuration), the one Apple Maps gives for the spot. Empty hash if none.
+# The street number of the spot, for the police text: { number }. Found automatically first: the one the map
+# gives (Nominatim), else the one Apple Maps gives for the spot where an Apple Maps key is set (APPLE_MAPS_*
+# in the configuration); only if neither has one, the one the reporter wrote (question "arithmos"). Empty
+# hash if none.
 sub greece_street_number {
     my ($self, $address) = @_;
+    my $parts = $address ? $address->parts : {};
+    return { number => $parts->{number} } if $parts->{number};
+    if (my $street = $parts->{street}) {
+        my $number = __PACKAGE__->greece_apple_number($self->latitude, $self->longitude, $street);
+        return { number => $number } if $number;
+    }
     my $given = $self->get_extra_field_value('arithmos') // '';
     $given =~ s/^\s+|\s+$//g;
     $given =~ s/^(?:αρ(?:ιθμ[οό]ς)?|no|n)\.?\s*//i;
     return { number => $given } if $given =~ /^\d{1,4}(?:\s*[-\/]\s*\d{1,4})?\s*[A-Za-zΑ-Ωα-ω]?$/;
-    my $parts = $address ? $address->parts : {};
-    return { number => $parts->{number} } if $parts->{number};
-    my $street = $parts->{street} or return {};
-    my $number = __PACKAGE__->greece_apple_number($self->latitude, $self->longitude, $street);
-    return $number ? { number => $number } : {};
+    return {};
 }
 
 # Apple Maps Server API (https://developer.apple.com/documentation/applemapsserverapi): the house number
