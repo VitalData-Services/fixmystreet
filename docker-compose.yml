@@ -59,6 +59,8 @@ services:
       - ./perllib/FixMyStreet/Script/UpdateAllReports.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/Script/UpdateAllReports.pm:ro
       # 👍/👎 on reports (POST /greece/vote/<id>).
       - ./perllib/FixMyStreet/App/Controller/GreeceVote.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceVote.pm:ro
+      # /sitemap.xml built from the database (municipalities and public reports).
+      - ./perllib/FixMyStreet/App/Controller/GreeceSitemap.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/App/Controller/GreeceSitemap.pm:ro
       # Photos are anonymised before they are stored (anonymiser service below); the police copies,
       # with plates readable, stay on their own volume until their report is sent.
       - ./perllib/FixMyStreet/PhotoStorage/Greece.pm:/var/www/fixmystreet/fixmystreet/perllib/FixMyStreet/PhotoStorage/Greece.pm:ro
