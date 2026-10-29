@@ -1212,7 +1212,8 @@ sub greece_recipients {
 
 
 # The street number of the spot, for the police text: { number }. The one the reporter gave (question
-# "arithmos"), else the one the map gives; empty hash if neither.
+# "arithmos"); else the one the map gives; else, where an Apple Maps key is set (APPLE_MAPS_* in the
+# configuration), the one Apple Maps gives for the spot. Empty hash if none.
 sub greece_street_number {
     my ($self, $address) = @_;
     my $given = $self->get_extra_field_value('arithmos') // '';
@@ -1220,7 +1221,91 @@ sub greece_street_number {
     $given =~ s/^(?:αρ(?:ιθμ[οό]ς)?|no|n)\.?\s*//i;
     return { number => $given } if $given =~ /^\d{1,4}(?:\s*[-\/]\s*\d{1,4})?\s*[A-Za-zΑ-Ωα-ω]?$/;
     my $parts = $address ? $address->parts : {};
-    return $parts->{number} ? { number => $parts->{number} } : {};
+    return { number => $parts->{number} } if $parts->{number};
+    my $street = $parts->{street} or return {};
+    my $number = __PACKAGE__->greece_apple_number($self->latitude, $self->longitude, $street);
+    return $number ? { number => $number } : {};
+}
+
+# Apple Maps Server API (https://developer.apple.com/documentation/applemapsserverapi): the house number
+# Apple gives for a point, when its street is the one we have. Apple's terms allow only temporary use of
+# the results, so nothing is stored: the answer is kept for a minute in this process (the SMS and the email
+# of one report come close together) and asked again later. Needs APPLE_MAPS_TEAM_ID, APPLE_MAPS_KEY_ID and
+# APPLE_MAPS_PRIVATE_KEY (the .p8 text) in the configuration; without them this returns nothing.
+my (%APPLE_SEEN, $APPLE_TOKEN, $APPLE_TOKEN_UNTIL);
+sub greece_apple_number {
+    my ($class, $lat, $lon, $street) = @_;
+    my $team = FixMyStreet->config('APPLE_MAPS_TEAM_ID');
+    my $kid = FixMyStreet->config('APPLE_MAPS_KEY_ID');
+    my $pem = FixMyStreet->config('APPLE_MAPS_PRIVATE_KEY');
+    return '' unless $team && $kid && $pem && defined $lat && defined $lon;
+    my $key = sprintf('%.5f,%.5f', $lat, $lon);
+    delete @APPLE_SEEN{ grep { $APPLE_SEEN{$_}[0] < time } keys %APPLE_SEEN };
+    return $APPLE_SEEN{$key}[1] if $APPLE_SEEN{$key};
+    my $number = eval { _greece_apple_lookup($team, $kid, $pem, $key, $street) };
+    warn "Apple Maps lookup failed: $@" if $@;
+    $APPLE_SEEN{$key} = [ time + 60, $number // '' ] if defined $number;   # a failure is tried again
+    return $number // '';
+}
+sub _greece_b64url { require MIME::Base64; (my $b = MIME::Base64::encode_base64(shift, '')) =~ tr{+/}{-_}; $b =~ s/=+$//; $b }
+# The JWT Apple asks for, signed ES256 with the .p8 key (openssl does the signing, as no Perl module for it is
+# installed; its DER signature is turned into the raw r||s a JWT carries).
+sub _greece_apple_jwt {
+    my ($team, $kid, $pem) = @_;
+    require JSON::MaybeXS; require File::Temp; require IPC::Open3; require Symbol;
+    my $json = JSON::MaybeXS->new(canonical => 1);
+    my $now = time;
+    my $input = _greece_b64url($json->encode({ alg => 'ES256', kid => $kid, typ => 'JWT' })) . '.'
+        . _greece_b64url($json->encode({ iss => $team, iat => $now, exp => $now + 600 }));
+    my $file = File::Temp->new(DIR => '/dev/shm', SUFFIX => '.pem');   # mode 0600, removed with the object
+    print $file $pem; close $file;
+    my $pid = IPC::Open3::open3(my $in, my $out, my $err = Symbol::gensym(), 'openssl', 'dgst', '-sha256', '-sign', $file->filename);
+    binmode $in; binmode $out;
+    print $in $input; close $in;
+    my $der = do { local $/; <$out> };
+    waitpid $pid, 0;
+    die "openssl signing failed\n" unless $? == 0 && length $der > 8;
+    my @b = unpack 'C*', $der;
+    my $i = ($b[1] & 0x80) ? 2 + ($b[1] & 0x7f) : 2;   # past the SEQUENCE header
+    my @parts;
+    for (1 .. 2) {
+        die "bad signature\n" unless $b[$i] == 0x02;
+        my $len = $b[$i + 1];
+        my @n = @b[$i + 2 .. $i + 1 + $len];
+        shift @n while @n > 32 && $n[0] == 0;
+        unshift @n, 0 while @n < 32;
+        push @parts, @n;
+        $i += 2 + $len;
+    }
+    return $input . '.' . _greece_b64url(pack 'C*', @parts);
+}
+sub _greece_apple_lookup {
+    my ($team, $kid, $pem, $loc, $street) = @_;
+    require HTTP::Tiny; require JSON::MaybeXS; require Unicode::Normalize;
+    my $http = HTTP::Tiny->new(timeout => 5, agent => 'FixMyStreets/1.0 (fixmystreets.gr)');
+    my $json = JSON::MaybeXS->new;
+    if (!$APPLE_TOKEN || $APPLE_TOKEN_UNTIL < time + 30) {
+        my $res = $http->get('https://maps-api.apple.com/v1/token',
+            { headers => { Authorization => 'Bearer ' . _greece_apple_jwt($team, $kid, $pem) } });
+        die "token: $res->{status}\n" unless $res->{success};
+        my $t = $json->decode($res->{content});
+        ($APPLE_TOKEN, $APPLE_TOKEN_UNTIL) = ($t->{accessToken}, time + ($t->{expiresInSeconds} || 300));
+    }
+    my $res = $http->get('https://maps-api.apple.com/v1/reverseGeocode?lang=el&loc=' . $loc,
+        { headers => { Authorization => "Bearer $APPLE_TOKEN" } });
+    if ($res->{status} == 401) { $APPLE_TOKEN = undef; die "reverseGeocode: 401\n"; }
+    die "reverseGeocode: $res->{status}\n" unless $res->{success};
+    my $a = $json->decode($res->{content})->{results}[0]{structuredAddress} or return '';
+    my $plain = sub {
+        my $x = Unicode::Normalize::NFD(uc(shift // ''));
+        $x =~ s/\p{M}//g; $x =~ s/[^\p{L}\p{N}]+//g;
+        $x =~ s/^(?:ΣΤΡ(?:ΑΤΗΓΟΥ)?|ΛΕΩΦ(?:ΟΡΟΣ)?|ΟΔΟΣ|ΠΛΑΤΕΙΑ|ΠΛ)//;
+        $x;
+    };
+    my ($have, $want) = ($plain->($a->{thoroughfare}), $plain->($street));
+    return '' unless length $have && length $want && (index($want, $have) >= 0 || index($have, $want) >= 0);
+    my $n = $a->{subThoroughfare} // '';
+    return $n =~ /^\d{1,4}[A-Za-zΑ-Ωα-ω]?$/ ? $n : '';
 }
 # For a police complaint, the SMS the reporter can send from their phone: { number, body }, e.g.
 #   Όχημα με πινακίδα ΙΚΧ-1234 κλείνει είσοδο οχημάτων (γκαράζ) στη διεύθυνση Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική.
