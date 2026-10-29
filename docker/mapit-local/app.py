@@ -121,6 +121,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {str(area): AREAS[area]}, "local", t0)
         elif len(parts) == 2 and parts[0] == "area" and parts[1].isdigit() and int(parts[1]) in AREAS:
             return self.send(200, AREAS[int(parts[1])], "local", t0)
+        elif len(parts) == 2 and parts[0] == "areas" and set(parts[1].split(",")) == {TYPE}:
+            # The list of all areas of our type (admin body form, "Area covered"): ours only. Global MapIt would
+            # answer with every country's level-7 areas (Korean districts, ...).
+            return self.send(200, {str(k): v for k, v in AREAS.items()}, "local", t0)
         elif len(parts) == 2 and parts[0] == "areas":
             ids = [x for x in parts[1].split(",") if x]
             if ids and all(x.isdigit() and int(x) in AREAS for x in ids):
