@@ -1243,11 +1243,12 @@ sub greece_apple_number {
     my $pem = FixMyStreet->config('APPLE_MAPS_PRIVATE_KEY');
     return '' unless $team && $kid && $pem && defined $lat && defined $lon;
     my $key = sprintf('%.5f,%.5f', $lat, $lon);
+    my $seen = "$key|$street";
     delete @APPLE_SEEN{ grep { $APPLE_SEEN{$_}[0] < time } keys %APPLE_SEEN };
-    return $APPLE_SEEN{$key}[1] if $APPLE_SEEN{$key};
+    return $APPLE_SEEN{$seen}[1] if $APPLE_SEEN{$seen};
     my $number = eval { _greece_apple_lookup($team, $kid, $pem, $key, $street) };
     warn "Apple Maps lookup failed: $@" if $@;
-    $APPLE_SEEN{$key} = [ time + 60, $number // '' ] if defined $number;   # a failure is tried again
+    $APPLE_SEEN{$seen} = [ time + 60, $number // '' ] if defined $number;   # a failure is tried again
     return $number // '';
 }
 sub _greece_b64url { require MIME::Base64; (my $b = MIME::Base64::encode_base64(shift, '')) =~ tr{+/}{-_}; $b =~ s/=+$//; $b }
@@ -1286,7 +1287,7 @@ sub _greece_apple_lookup {
     my ($team, $kid, $pem, $loc, $street) = @_;
     require HTTP::Tiny; require JSON::MaybeXS; require Unicode::Normalize;
     my $http = HTTP::Tiny->new(timeout => 5, agent => 'FixMyStreets/1.0 (fixmystreets.gr)');
-    my $json = JSON::MaybeXS->new;
+    my $json = JSON::MaybeXS->new(utf8 => 1);   # the body is UTF-8 bytes
     if (!$APPLE_TOKEN || $APPLE_TOKEN_UNTIL < time + 30) {
         my $res = $http->get('https://maps-api.apple.com/v1/token',
             { headers => { Authorization => 'Bearer ' . _greece_apple_jwt($team, $kid, $pem) } });
