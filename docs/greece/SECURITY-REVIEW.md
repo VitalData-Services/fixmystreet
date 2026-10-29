@@ -35,3 +35,16 @@ exploitable without further conditions.
 
 Cloudflare settings (WAF, Access, minimum TLS), VM-level backups, anything that needs a staff session, the production database contents,
 which pages load jQuery UI, the 1,689 upstream commits one by one.
+
+## Status, 2026-10-29 (applied after the review, owner: «κάνε τα 2-10»)
+
+Done: nginx block of `_override_` in the query string and limits on 2fa/otp-check/privacy/nearby-private/photo upload; open redirect after 2FA fixed;
+OTP and 2FA try counters raised under a row lock; GreecePrivacy ceilings (3 flags per visitor and day, 10 hidings per hour); video upload ceilings
+(3 per address, 20 and 3 GB open, 5 GB free disk kept, unfinished uploads swept after 3 h); retention keeps alert tokens; image rebuilt with the
+Debian 11 security updates (from archive.debian.org, ImageMagick 6.9.11 deb11u16, OpenSSL, libc) and Catalyst::Plugin::Session 0.44 (rollback tag
+`fixmystreets-gr:pre-20261029`); PostgreSQL 13.11 to 16.9 by dump/restore (old volume `fixmystreet-pgdata` and image `fixmystreet-postgres:pre-pg16-13.11`
+kept for rollback; pg_hba uses md5 so the old password hashes work, to be re-hashed to scram when the passwords are rotated); infra9 refuses
+`@fixmystreets.gr` as sender from every host of 10.0.0.0/16 and 192.168.0.0/16 except the fms VM (`/etc/postfix/fms_sender_clients.cidr`, backup
+`main.cf.bak-20261029-fms-sender`); `bin/greece/backup` (pg_dump to /var/backups/fms, 14 days; the cron is the owner's to install).
+Not done: image on a current upstream and Debian 12, non-root container and read-only mounts, enforcing the CSP, STAGING_SITE: 0 (the `_override_`
+parameters sent in a POST body still reach the app until the flip), the backup copy to another host.
