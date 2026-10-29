@@ -1227,12 +1227,42 @@ sub greece_street_number {
     return $cached ? { number => $cached, near => 1 } : {} if defined $cached;
     my $street = $parts->{street} or return {};
     # One try per report (a failed lookup is kept as "none"), so a slow server never holds a page up twice.
-    my $near = eval { $self->_greece_near_number($street) } // '';
+    # The public Overpass servers can accept a connection and never answer, and neither HTTP::Tiny's timeout
+    # nor alarm() stops that (the page hung), so the lookup runs in a child process that is killed after 6 s.
+    my $near = $self->_greece_near_number_limited($street, 6);
     if ($self->in_storage) {
         $self->set_extra_metadata(greece_near_number => $near);
         eval { $self->update };
     }
     return length $near ? { number => $near, near => 1 } : {};
+}
+sub _greece_near_number_limited {
+    my ($self, $street, $seconds) = @_;
+    require IO::Select; require POSIX;
+    pipe(my $r, my $w) or return '';
+    my $pid = fork;
+    return '' unless defined $pid;
+    if (!$pid) {
+        close $r;
+        my $n = eval { $self->_greece_near_number($street) };
+        binmode $w, ':utf8';
+        print $w defined $n ? "ok:$n" : 'fail';
+        close $w;
+        POSIX::_exit(0);
+    }
+    close $w;
+    my $out = '';
+    my $sel = IO::Select->new($r);
+    my $end = time + $seconds;
+    while (time < $end && $sel->can_read($end - time)) {
+        my $got = sysread($r, my $buf, 256);
+        last unless $got;
+        $out .= $buf;
+    }
+    close $r;
+    kill 9, $pid;
+    waitpid $pid, 0;
+    return $out =~ /^ok:(\S*)$/ ? $1 : '';
 }
 sub _greece_near_number {
     my ($self, $street) = @_;
