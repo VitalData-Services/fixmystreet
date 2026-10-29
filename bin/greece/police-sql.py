@@ -65,6 +65,8 @@ QUESTIONS = {
         # Filled in from the photo where a plate is read (camera.js); the reporter can correct it.
         {"code": "pinakida", "variable": "true", "order": 2, "datatype": "string", "required": "false",
          "description": "Αριθμός κυκλοφορίας (πινακίδα), αν αφορά συγκεκριμένο όχημα"},
+        {"code": "arithmos", "variable": "true", "order": 3, "datatype": "string", "required": "false",
+         "description": "Αριθμός οδού, αν τον ξέρεις (π.χ. 46)"},
     ],
 }
 NO_QUESTIONS = {"email_template": "ev"}

@@ -1021,6 +1021,7 @@ my %FIELD_EN = (
         p72 => 'Unauthorised road markings and P-72 sign',
     } },
     pinakida => { description => 'Registration number (number plate), if it is about a particular vehicle' },
+    arithmos => { description => 'Street number, if you know it (e.g. 46)' },
 );
 sub munge_report_new_category_list {
     my ($self, $options, $contacts, $extras) = @_;
@@ -1175,7 +1176,9 @@ sub greece_address {
     (my $postcode = $osm->{postcode} || $parts->{postcode} || '') =~ s/^(\d{3})\s*(\d{2})$/$1 $2/;
     (my $region = $osm->{state} || '') =~ s/^Περιφέρεια\s+//;
     $region = $REGION{$region} || $region;
-    my $street = join ' ', grep { $_ } $parts->{street}, $parts->{number};
+    my $num = $self->greece_street_number($address);
+    my $street = join ' ', grep { $_ } $parts->{street},
+        $num->{number} ? ($num->{near} ? "(κοντά στο $num->{number})" : $num->{number}) : ();
     return join ', ', grep { $_ } $street, join(' ', grep { $_ } $postcode, $place), $region;
 }
 
@@ -1208,6 +1211,63 @@ sub greece_recipients {
     return map { split /\s*,\s*/, $_->email } @contacts;
 }
 
+
+# The street number of the spot, for the police text: { number, near }. First the one the reporter gave
+# (question "arithmos"); then the one the map gives; failing that the nearest numbered address on the same
+# street in OpenStreetMap (Overpass), as `near` since it is not the spot itself. Empty hash if none.
+sub greece_street_number {
+    my ($self, $address) = @_;
+    my $given = $self->get_extra_field_value('arithmos') // '';
+    $given =~ s/^\s+|\s+$//g;
+    $given =~ s/^(?:αρ(?:ιθμ[οό]ς)?|no|n)\.?\s*//i;
+    return { number => $given } if $given =~ /^\d{1,4}(?:\s*[-\/]\s*\d{1,4})?\s*[A-Za-zΑ-Ωα-ω]?$/;
+    my $parts = $address ? $address->parts : {};
+    return { number => $parts->{number} } if $parts->{number};
+    my $cached = $self->get_extra_metadata('greece_near_number');
+    return $cached ? { number => $cached, near => 1 } : {} if defined $cached;
+    my $street = $parts->{street} or return {};
+    # One try per report (a failed lookup is kept as "none"), so a slow server never holds a page up twice.
+    my $near = eval { $self->_greece_near_number($street) } // '';
+    if ($self->in_storage) {
+        $self->set_extra_metadata(greece_near_number => $near);
+        eval { $self->update };
+    }
+    return length $near ? { number => $near, near => 1 } : {};
+}
+sub _greece_near_number {
+    my ($self, $street) = @_;
+    require HTTP::Tiny; require Unicode::Normalize;
+    my $plain = sub {
+        my $s = Unicode::Normalize::NFD(uc(shift // ''));
+        $s =~ s/\p{M}//g; $s =~ s/[^\p{L}\p{N}]+//g;
+        $s =~ s/^(?:ΣΤΡ(?:ΑΤΗΓΟΥ)?|ΛΕΩΦ(?:ΟΡΟΣ)?|ΟΔΟΣ|ΠΛΑΤΕΙΑ|ΠΛ)//;
+        return $s;
+    };
+    my ($lat, $lon) = ($self->latitude, $self->longitude);
+    my $query = sprintf('[out:json][timeout:8];nwr(around:60,%.6f,%.6f)["addr:housenumber"]["addr:street"];out center 40;', $lat, $lon);
+    # Public Overpass servers are often full; try the next one. Once per report (the answer is kept).
+    my $data;
+    for my $url ('https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter') {
+        my $res = HTTP::Tiny->new(timeout => 4, agent => 'FixMyStreets/1.0 (fixmystreets.gr)')
+            ->post_form($url, { data => $query });
+        my $got = $res->{success} && $res->{content} =~ /^\s*\{/ ? eval { JSON::MaybeXS->new->decode($res->{content}) } : undef;
+        # a busy server answers 200 with a "remark" about a timeout and no elements
+        if ($got && !$got->{remark}) { $data = $got; last; }
+    }
+    return undef unless $data;
+    my $want = $plain->($street);
+    my ($best, $best_d);
+    for my $el (@{ $data->{elements} || [] }) {
+        my $t = $el->{tags} || {};
+        my ($elat, $elon) = ($el->{lat} // $el->{center}{lat}, $el->{lon} // $el->{center}{lon});
+        next unless defined $elat && defined $elon && $t->{'addr:housenumber'} =~ /^\d{1,4}[A-Za-zΑ-Ωα-ω]?$/;
+        my $has = $plain->($t->{'addr:street'});
+        next unless length $has && length $want && (index($want, $has) >= 0 || index($has, $want) >= 0);
+        my $d = sqrt((($elat - $lat) * 111_200) ** 2 + (($elon - $lon) * 111_200 * cos($lat * 3.14159265 / 180)) ** 2);
+        ($best, $best_d) = ($t->{'addr:housenumber'}, $d) if !defined $best_d || $d < $best_d;
+    }
+    return defined $best ? $best : '';
+}
 # For a police complaint, the SMS the reporter can send from their phone: { number, body }, e.g.
 #   Όχημα με πινακίδα ΙΚΧ-1234 κλείνει είσοδο οχημάτων (γκαράζ) στη διεύθυνση Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική.
 #   Αρ. αναφοράς 24102026-1, στάλθηκε στα x@astynomia.gr και y@astynomia.gr.
@@ -1222,7 +1282,7 @@ sub greece_sms {
     # Where the map gives the street without a house number (OpenStreetMap has none there), a blank
     # "αρ. ..." stands in its place for the reporter to fill in before sending (no coordinates).
     my $closest = $cobrand && $cobrand->find_closest($self);
-    my $number = $closest && $closest->parts->{number};
+    my $number = $self->greece_street_number($closest)->{number};
     $address =~ s/^([^,]+)/$1 αρ. .../ if $address && !$number;
     my $where = $address ? "στη διεύθυνση $address" : 'στο σημείο της αναφοράς';
     my $what;
