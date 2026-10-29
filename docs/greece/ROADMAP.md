@@ -68,6 +68,22 @@ Requests it covers: access/copy (Art. 15), erasure (Art. 17), rectification (Art
 - Postgres 13 is end of life: plan the upgrade.
 - Read the SPF/DKIM/DMARC reports for fixmystreets.gr; check that DMARC is published.
 
+## Later: Traffic Police as a second recipient (added 2026-10-29)
+Source: mitos.gov.gr, «Τεχνική αστυνόμευση οδικού δικτύου από την Ελληνική Αστυνομία» (updated 2026-07-30). The Hellenic
+Police records defects of the road network (faulty or missing signs and markings, bad road works) and informs the
+responsible body. Complaints go by phone, in person or in writing to the local Traffic department or directorate; no
+digital channel, no email on the page, no documents, free. Legal basis: PD 178/2014, PD 141/1991, Law 2696/1999.
+- Categories signs, road markings and dangerous spot also go to the Traffic department of the area (cc), «χωρίς στοιχεία
+  επικοινωνίας». Potholes and road surface stay with the municipality or the road authority only.
+- Needs first: verified addresses of the Traffic departments and directorates by area (official sources, checked one by
+  one, same structure as the municipality contacts), and a phone or written confirmation that they accept reports from
+  a platform. Nothing is sent to the police before the owner says yes.
+- Form and privacy page get one line saying some reports also inform the Traffic Police.
+- Private records: add the Hellenic Police (Traffic) as a recipient in the RoPA and the DPIA. Not in the public fork.
+- National and provincial roads: the municipality is often not the responsible body; the road authority (Region,
+  motorway operator) is a separate item that needs its own check.
+- The page gives 5 days and, in another step, 50 days, without saying how they relate: do not promise a time to users.
+
 ## Decided not to do
 
 - Open data publishing (2026-10-28). The code is open source (AGPL); the data is not offered as open data.
