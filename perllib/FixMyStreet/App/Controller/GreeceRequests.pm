@@ -1,6 +1,7 @@
 package FixMyStreet::App::Controller::GreeceRequests;
 use Moose;
 use namespace::autoclean;
+use utf8;
 BEGIN { extends 'Catalyst::Controller'; }
 
 =head1 NAME
