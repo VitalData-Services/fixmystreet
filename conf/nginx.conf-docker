@@ -15,6 +15,10 @@ limit_req_zone $http_cf_connecting_ip zone=places_rate:5m rate=5r/s;
 limit_req_zone $http_cf_connecting_ip zone=video_start:5m rate=6r/m;
 # Codes that confirm a reporter's email (App::Controller::GreeceOTP): a few per visitor and minute.
 limit_req_zone $http_cf_connecting_ip zone=otp_send:5m rate=3r/m;
+# Codes and questions that can be guessed or probed (2FA step, code check, hiding a report, nearby private
+# reports, photo upload): few tries per visitor and minute, so the try counters in the app are not the only limit.
+limit_req_zone $http_cf_connecting_ip zone=sensitive:5m rate=20r/m;
+limit_req_zone $http_cf_connecting_ip zone=photo_up:5m rate=30r/m;
 # Municipality outlines (location /mapit/ below): kept for 30 days, so global MapIt sees each once.
 proxy_cache_path /var/cache/nginx/mapit levels=1:2 keys_zone=mapit:2m max_size=100m inactive=30d;
 limit_req_zone $visitor zone=mapit_rate:5m rate=5r/s;
@@ -96,6 +100,11 @@ server {
     # used to go to the UK MapIt, as //area/..., and got 404/503, so no outline was drawn.
     # No RSS feeds on this site (owner, 2026-10-27): the pages link none, and the old addresses are
     # gone for good, so readers and search engines drop them.
+    # _override_xxx parameters (STAGING_SITE only) would let a visitor switch the Greece code off in their own
+    # session; nobody needs them on the public site.
+    if ($args ~* "(^|&)_override_") {
+        return 400;
+    }
     location ^~ /rss {
         return 410;
     }
@@ -119,6 +128,24 @@ server {
     }
 
     # Video uploads: slices of at most 9 MB (the page sends 8), and few new uploads per visitor.
+    location ~ ^/greece/(2fa|otp/check|privacy/[0-9]+|nearby-private)$ {
+        limit_req zone=sensitive burst=10 nodelay;
+        limit_req_status 429;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_redirect off;
+        proxy_pass http://fixmystreet.svc:9000;
+    }
+    location = /greece/photo/upload {
+        limit_req zone=photo_up burst=10 nodelay;
+        limit_req_status 429;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_redirect off;
+        proxy_pass http://fixmystreet.svc:9000;
+    }
     location = /greece/otp/send {
         limit_req zone=otp_send burst=2 nodelay;
         limit_req_status 429;

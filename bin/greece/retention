@@ -1,8 +1,9 @@
 #!/usr/bin/env perl
 # Retention for the data the privacy page promises to purge (§8), beyond what FixMyStreet's own
 # bin/expire-sessions already does:
-#   - tokens older than 7 days (sign-in links and codes last a day or less; unused alert-confirmation
-#     links older than a week are dead);
+#   - tokens older than 7 days (sign-in links and codes last a day or less), except the alert ones: the
+#     unsubscribe link in every alert email is a token and has to keep working while the alert exists
+#     (alerts never confirmed or disabled are removed below);
 #   - partial_user rows (no date column, so only when no user has that email);
 #   - alerts disabled, or never confirmed, for more than 90 days;
 #   - reports/updates never confirmed after 14 days (nobody clicked the emailed link);
@@ -27,7 +28,7 @@ my $dbh = FixMyStreet::DB->schema->storage->dbh;
 
 my @rules = (
     [ 'tokens older than 7 days' =>
-        q{token WHERE created < now() - interval '7 days'} ],
+        q{token WHERE created < now() - interval '7 days' AND scope NOT IN ('alert', 'alert_to_reporter')} ],
     [ 'partial registrations of no user' =>
         q{partial_user WHERE NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.email) = lower(partial_user.email))} ],
     [ 'alerts disabled for 90 days' =>
