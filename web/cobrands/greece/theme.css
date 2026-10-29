@@ -1679,4 +1679,3 @@ body #front-recently { box-sizing: border-box; margin: 0 0 1.2em !important; pad
 #front-recently .item-list--reports__item { margin: 0; border-radius: var(--gr-radius); }
 #front-recently .item-list--reports__item + .item-list--reports__item { border-top: 1px solid var(--gr-line); }
 body #front-recently .full-width { margin: 0 !important; }
-body #front-recently .item-list--reports__item a { padding-left: 4px; padding-right: 4px; }
