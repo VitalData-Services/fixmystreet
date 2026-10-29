@@ -48,3 +48,11 @@ kept for rollback; pg_hba uses md5 so the old password hashes work, to be re-has
 `main.cf.bak-20261029-fms-sender`); `bin/greece/backup` (pg_dump to /var/backups/fms, 14 days; the cron is the owner's to install).
 Not done: image on a current upstream and Debian 12, non-root container and read-only mounts, enforcing the CSP, STAGING_SITE: 0 (the `_override_`
 parameters sent in a POST body still reach the app until the flip), the backup copy to another host.
+
+### Debian 12 image (2026-10-29)
+The app container now runs on Debian 12.11 (Perl 5.36, ImageMagick 6.9.11 from bookworm, Catalyst::Plugin::Session 0.44), image
+`fixmystreets-gr:d12` tagged as `latest`; the same v6.0 application tree. `docker/greece/d12/Dockerfile`. Checked: home, privacy,
+terms, reports, auth, sitemap, robots, admin redirect, the Greece controllers compile, database reads, public site 200 through
+Cloudflare. Rollback: `docker tag fixmystreets-gr:pre-d12 fixmystreets-gr:latest && docker compose up -d --no-build --force-recreate fixmystreet`
+(`pre-20261029` is the older Debian 11 image; Proxmox snapshot `pre-debian12-20261029` of VM 121). The application itself is
+still upstream v6.0 (not current upstream).
