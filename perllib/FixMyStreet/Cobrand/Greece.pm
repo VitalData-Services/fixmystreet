@@ -1176,8 +1176,8 @@ sub greece_address {
     (my $postcode = $osm->{postcode} || $parts->{postcode} || '') =~ s/^(\d{3})\s*(\d{2})$/$1 $2/;
     (my $region = $osm->{state} || '') =~ s/^Περιφέρεια\s+//;
     $region = $REGION{$region} || $region;
-    my $num = $self->greece_street_number($address);
-    my $street = join ' ', grep { $_ } $parts->{street}, $num->{number};
+    my $sp = $self->greece_street_parts($address);
+    my $street = join ' ', grep { $_ } $sp->{street}, $sp->{number};
     return join ', ', grep { $_ } $street, join(' ', grep { $_ } $postcode, $place), $region;
 }
 
@@ -1230,26 +1230,53 @@ sub greece_street_number {
     return {};
 }
 
+# The street and number to write for the spot: { street, number }. For an entrance or double parking the
+# building at the spot is what counts, so there the address Apple Maps gives (street and number) is used when
+# it has one; otherwise the street the map gives, with the number from greece_street_number.
+sub greece_street_parts {
+    my ($self, $address) = @_;
+    my $parts = $address ? $address->parts : {};
+    if (($self->get_extra_field_value('paravasi') // '') =~ /^(?:eisodos|diplo)$/) {
+        my $ap = __PACKAGE__->greece_apple_address($self->latitude, $self->longitude);
+        return { street => $ap->{street}, number => $ap->{number} } if $ap && $ap->{street} && $ap->{number};
+    }
+    return { street => $parts->{street}, number => $self->greece_street_number($address)->{number} };
+}
+
 # Apple Maps Server API (https://developer.apple.com/documentation/applemapsserverapi): the house number
 # Apple gives for a point, when its street is the one we have. Apple's terms allow only temporary use of
 # the results, so nothing is stored: the answer is kept for a minute in this process (the SMS and the email
 # of one report come close together) and asked again later. Needs APPLE_MAPS_TEAM_ID, APPLE_MAPS_KEY_ID and
 # APPLE_MAPS_PRIVATE_KEY (the .p8 text) in the configuration; without them this returns nothing.
 my (%APPLE_SEEN, $APPLE_TOKEN, $APPLE_TOKEN_UNTIL);
-sub greece_apple_number {
-    my ($class, $lat, $lon, $street) = @_;
+sub greece_apple_address {
+    my ($class, $lat, $lon) = @_;
     my $team = FixMyStreet->config('APPLE_MAPS_TEAM_ID');
     my $kid = FixMyStreet->config('APPLE_MAPS_KEY_ID');
     my $pem = FixMyStreet->config('APPLE_MAPS_PRIVATE_KEY');
-    return '' unless $team && $kid && $pem && defined $lat && defined $lon;
+    return undef unless $team && $kid && $pem && defined $lat && defined $lon;
     my $key = sprintf('%.5f,%.5f', $lat, $lon);
-    my $seen = "$key|$street";
     delete @APPLE_SEEN{ grep { $APPLE_SEEN{$_}[0] < time } keys %APPLE_SEEN };
-    return $APPLE_SEEN{$seen}[1] if $APPLE_SEEN{$seen};
-    my $number = eval { _greece_apple_lookup($team, $kid, $pem, $key, $street) };
+    return $APPLE_SEEN{$key}[1] if $APPLE_SEEN{$key};
+    my $address = eval { _greece_apple_lookup($team, $kid, $pem, $key) };
     warn "Apple Maps lookup failed: $@" if $@;
-    $APPLE_SEEN{$seen} = [ time + 60, $number // '' ] if defined $number;   # a failure is tried again
-    return $number // '';
+    $APPLE_SEEN{$key} = [ time + 60, $address ] if defined $address;   # a failure is tried again
+    return $address;
+}
+# The number Apple gives for the point, when its street is the given one (else nothing).
+sub greece_apple_number {
+    my ($class, $lat, $lon, $street) = @_;
+    my $a = $class->greece_apple_address($lat, $lon) or return '';
+    require Unicode::Normalize;
+    my $plain = sub {
+        my $x = Unicode::Normalize::NFD(uc(shift // ''));
+        $x =~ s/\p{M}//g; $x =~ s/[^\p{L}\p{N}]+//g;
+        $x =~ s/^(?:ΣΤΡ(?:ΑΤΗΓΟΥ)?|ΛΕΩΦ(?:ΟΡΟΣ)?|ΟΔΟΣ|ΠΛΑΤΕΙΑ|ΠΛ)//;
+        $x;
+    };
+    my ($have, $want) = ($plain->($a->{street}), $plain->($street));
+    return '' unless length $have && length $want && (index($want, $have) >= 0 || index($have, $want) >= 0);
+    return $a->{number} // '';
 }
 sub _greece_b64url { require MIME::Base64; (my $b = MIME::Base64::encode_base64(shift, '')) =~ tr{+/}{-_}; $b =~ s/=+$//; $b }
 # The JWT Apple asks for, signed ES256 with the .p8 key (openssl does the signing, as no Perl module for it is
@@ -1284,8 +1311,8 @@ sub _greece_apple_jwt {
     return $input . '.' . _greece_b64url(pack 'C*', @parts);
 }
 sub _greece_apple_lookup {
-    my ($team, $kid, $pem, $loc, $street) = @_;
-    require HTTP::Tiny; require JSON::MaybeXS; require Unicode::Normalize;
+    my ($team, $kid, $pem, $loc) = @_;
+    require HTTP::Tiny; require JSON::MaybeXS;
     my $http = HTTP::Tiny->new(timeout => 5, agent => 'FixMyStreets/1.0 (fixmystreets.gr)');
     my $json = JSON::MaybeXS->new(utf8 => 1);   # the body is UTF-8 bytes
     if (!$APPLE_TOKEN || $APPLE_TOKEN_UNTIL < time + 30) {
@@ -1299,17 +1326,9 @@ sub _greece_apple_lookup {
         { headers => { Authorization => "Bearer $APPLE_TOKEN" } });
     if ($res->{status} == 401) { $APPLE_TOKEN = undef; die "reverseGeocode: 401\n"; }
     die "reverseGeocode: $res->{status}\n" unless $res->{success};
-    my $a = $json->decode($res->{content})->{results}[0]{structuredAddress} or return '';
-    my $plain = sub {
-        my $x = Unicode::Normalize::NFD(uc(shift // ''));
-        $x =~ s/\p{M}//g; $x =~ s/[^\p{L}\p{N}]+//g;
-        $x =~ s/^(?:ΣΤΡ(?:ΑΤΗΓΟΥ)?|ΛΕΩΦ(?:ΟΡΟΣ)?|ΟΔΟΣ|ΠΛΑΤΕΙΑ|ΠΛ)//;
-        $x;
-    };
-    my ($have, $want) = ($plain->($a->{thoroughfare}), $plain->($street));
-    return '' unless length $have && length $want && (index($want, $have) >= 0 || index($have, $want) >= 0);
+    my $a = $json->decode($res->{content})->{results}[0]{structuredAddress} or return {};
     my $n = $a->{subThoroughfare} // '';
-    return $n =~ /^\d{1,4}[A-Za-zΑ-Ωα-ω]?$/ ? $n : '';
+    return { street => $a->{thoroughfare} // '', number => ($n =~ /^\d{1,4}[A-Za-zΑ-Ωα-ω]?$/ ? $n : '') };
 }
 # For a police complaint, the SMS the reporter can send from their phone: { number, body }, e.g.
 #   Όχημα με πινακίδα ΙΚΧ-1234 κλείνει είσοδο οχημάτων (γκαράζ) στη διεύθυνση Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική.
@@ -1325,7 +1344,7 @@ sub greece_sms {
     # Where the map gives the street without a house number (OpenStreetMap has none there), a blank
     # "αρ. ..." stands in its place for the reporter to fill in before sending (no coordinates).
     my $closest = $cobrand && $cobrand->find_closest($self);
-    my $number = $self->greece_street_number($closest)->{number};
+    my $number = $self->greece_street_parts($closest)->{number};
     $address =~ s/^([^,]+)/$1 αρ. .../ if $address && !$number;
     my $where = $address ? "στη διεύθυνση $address" : 'στο σημείο της αναφοράς';
     my $what;
