@@ -6,5 +6,7 @@
   <url><loc>https://fixmystreets.gr/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://fixmystreets.gr/about/foreis</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://fixmystreets.gr/about/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://fixmystreets.gr/reports/%CE%94%CE%AE%CE%BC%CE%BF%CF%82+%CE%A7%CE%B1%CF%8A%CE%B4%CE%B1%CF%81%CE%AF%CE%BF%CF%85</loc><lastmod>2026-10-26</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://fixmystreets.gr/about/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://fixmystreets.gr/reports/%CE%94%CE%AE%CE%BC%CE%BF%CF%82+%CE%9D%CE%AD%CE%B1%CF%82+%CE%A6%CE%B9%CE%BB%CE%B1%CE%B4%CE%AD%CE%BB%CF%86%CE%B5%CE%B9%CE%B1%CF%82+-+%CE%9D%CE%AD%CE%B1%CF%82+%CE%A7%CE%B1%CE%BB%CE%BA%CE%B7%CE%B4%CF%8C%CE%BD%CE%B1%CF%82</loc><lastmod>2026-10-28</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://fixmystreets.gr/reports/%CE%94%CE%AE%CE%BC%CE%BF%CF%82+%CE%A7%CE%B1%CF%8A%CE%B4%CE%B1%CF%81%CE%AF%CE%BF%CF%85</loc><lastmod>2026-10-28</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
 </urlset>
