@@ -1219,13 +1219,12 @@ sub greece_sms {
 
     my $paravasi = $self->get_extra_field_value('paravasi') // '';
     my $address = $self->greece_address($cobrand);
-    # Where the map gives the street without a house number (OpenStreetMap has none there), the spot's
-    # coordinates as well, so that the police can find it.
+    # Where the map gives the street without a house number (OpenStreetMap has none there), a blank
+    # "αρ. ..." stands in its place for the reporter to fill in before sending (no coordinates).
     my $closest = $cobrand && $cobrand->find_closest($self);
     my $number = $closest && $closest->parts->{number};
-    my $where = !$address ? sprintf('στο σημείο %.5f, %.5f', $self->latitude, $self->longitude)
-        : $number ? "στη διεύθυνση $address"
-        : sprintf('στη διεύθυνση %s (σημείο %.5f, %.5f)', $address, $self->latitude, $self->longitude);
+    $address =~ s/^([^,]+)/$1 αρ. .../ if $address && !$number;
+    my $where = $address ? "στη διεύθυνση $address" : 'στο σημείο της αναφοράς';
     my $what;
     if (my $does = $SMS_VEHICLE{$paravasi}) {
         my $plate = $self->greece_plate;
