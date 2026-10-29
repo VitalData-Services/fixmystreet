@@ -132,12 +132,12 @@ services:
     logging: *logging
     build:
       dockerfile_inline: |
-        FROM postgres:13.11
+        FROM postgres:16.9
         RUN localedef -i en_GB -c -f UTF-8 -A /usr/share/locale/locale.alias en_GB.UTF-8
         ENV LANG=en_GB.utf8
     restart: always
     volumes:
-      - fixmystreet-pgdata:/var/lib/postgresql/data/pgdata
+      - fixmystreet-pgdata16:/var/lib/postgresql/data/pgdata
     environment:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
       PGDATA: '/var/lib/postgresql/data/pgdata'
@@ -226,7 +226,9 @@ services:
           - tiles.svc
 
 volumes:
+  # pgdata is the PostgreSQL 13 cluster, kept for a rollback; pgdata16 is the live one.
   fixmystreet-pgdata:
+  fixmystreet-pgdata16:
   fixmystreet-videos:
   fixmystreet-cache:
   fixmystreet-originals:

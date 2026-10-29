@@ -1,0 +1,13 @@
+#!/bin/sh
+# Nightly backup of fixmystreets.gr on the host: a dump of the database (14 days kept). The photo and video volumes
+# are copied by the VM-level backup (Veeam), except /var/lib/fms-originals, which stays out of every copy.
+# Run as root (cron): /opt/fixmystreet/bin/greece/backup
+set -e
+D=/var/backups/fms
+mkdir -p "$D"; chmod 700 "$D"
+F="$D/fixmystreet-$(date +%Y%m%d-%H%M).sql.gz"
+docker exec fixmystreet-postgres-1 pg_dump -U postgres -d fixmystreet | gzip -9 > "$F.part"
+gzip -t "$F.part"
+mv "$F.part" "$F"
+find "$D" -name 'fixmystreet-*.sql.gz' -mtime +14 -delete
+ls -l "$F"
