@@ -7,6 +7,7 @@ use utf8;
 use DateTime ();
 use Fcntl ();
 use JSON::MaybeXS ();
+use Unicode::Normalize ();
 
 # Reuse the Default cobrand's compiled CSS; this cobrand only adds templates and a little JS/CSS.
 sub asset_moniker { 'default' }
@@ -186,7 +187,10 @@ sub greece_default_name {
     return if $c->user_exists;   # an account's own name is never replaced
     my $name = $c->req->params->{name} // '';
     $name =~ s/^\s+|\s+$//g;
-    return unless $GREECE_NO_NAME{lc $name};
+    unless ($GREECE_NO_NAME{lc $name}) {
+        $c->req->params->{name} = $self->greece_name_normalise($name);   # greeklish into Greek letters
+        return;
+    }
     # A report without a photo needs a name (owner, 2026-10-26): report_check_for_errors says so.
     if ($c->req->path =~ m{^report/new/?$} && !greece_has_photo($c)) {
         $c->stash->{greece_name_needed} = 1;
@@ -353,8 +357,193 @@ sub greece_name_error {
     my (undef, $bad) = greece_mask_bad_words($name);
     return $self->greece_t('Το όνομα δεν επιτρέπεται. Γράψε το πραγματικό σου όνομα ή άφησέ το «Ανώνυμος».',
         'That name is not allowed. Write your real name, or leave it as «Anonymous».') if $bad;
-    return if length $name >= 4;
-    return $self->greece_t('Το όνομα θέλει τουλάχιστον 4 χαρακτήρες.', 'The name needs at least 4 characters.');
+    return $self->greece_t('Το όνομα θέλει τουλάχιστον 4 χαρακτήρες.', 'The name needs at least 4 characters.') if length $name < 4;
+    return $self->greece_t('Το όνομα δεν μοιάζει με πραγματικό. Γράψε το όνομά σου ή άφησέ το «Ανώνυμος».',
+        'That does not look like a real name. Write your name, or leave it as «Anonymous».') if $self->greece_name_nonsense($name);
+    return;
+}
+
+
+# ---- Names: greeklish into Greek letters, and a check that it is a name (owner, 2026-10-30) ----------------
+# A name typed with Latin letters that is plainly Greek («Giorgos Papadopoulos») is written with Greek ones
+# («Γιώργος Παπαδόπουλος»); any other name (John Smith) is left as it is. Accents are only known for the
+# first names below and for a few surname endings (-όπουλος, -άκης, -ίδης ...), so other words come without.
+# And a name that is not one («ΣΑΔΦΑΣΔΦ», «aaaa», «xzxzxz», digits) is refused, as the abusive words are.
+my @GR_FIRST_NAMES = (
+    # [ Greek, Latin spellings... ]
+    [qw(Γιώργος giorgos giwrgos yiorgos georgios giorgis gewrgios)], [qw(Γιάννης giannis yiannis giannhs ioannis yanis ιωάννης)],
+    [qw(Κώστας kostas costas kwstas konstantinos konstantinos constantinos)], [qw(Νίκος nikos nikolaos nikolas)],
+    [qw(Δημήτρης dimitris dhmhtris dimitrios mitsos dimitrhs)], [qw(Παναγιώτης panagiotis panagiwtis panos)],
+    [qw(Χρήστος christos xristos hristos)], [qw(Αθανάσιος athanasios thanasis thanos)], [qw(Μιχάλης michalis mixalis mihalis)],
+    [qw(Θοδωρής thodoris theodoros theodwros)], [qw(Βασίλης vasilis vasileios basilis vassilis)], [qw(Αντώνης antonis antonios)],
+    [qw(Στέλιος stelios)], [qw(Στάθης stathis)], [qw(Μανώλης manolis emmanouil manwlis)], [qw(Πέτρος petros)],
+    [qw(Παύλος pavlos pavlos paulos)], [qw(Σπύρος spyros spiros)], [qw(Αλέξανδρος alexandros aleksandros alexis)],
+    [qw(Ευάγγελος evangelos vaggelis vangelis)], [qw(Κυριάκος kyriakos kiriakos)], [qw(Λευτέρης lefteris eleftherios)],
+    [qw(Γρηγόρης grigoris gregoris)], [qw(Σωτήρης sotiris sotirios)], [qw(Φώτης fotis photis)], [qw(Άγγελος aggelos angelos)],
+    [qw(Ηλίας ilias elias)], [qw(Αλέκος alekos)], [qw(Μάριος marios)], [qw(Τάσος tasos anastasios)], [qw(Σταύρος stavros)],
+    [qw(Απόστολος apostolos)], [qw(Γεράσιμος gerasimos)], [qw(Διονύσης dionysis dionysios)], [qw(Ανδρέας andreas)],
+    [qw(Χαράλαμπος charalampos xaralampos haralampos)], [qw(Λάμπρος lampros)], [qw(Ορέστης orestis)], [qw(Πάρις paris)],
+    [qw(Μάκης makis)], [qw(Τάκης takis)], [qw(Σάκης sakis)], [qw(Λάκης lakis)], [qw(Αργύρης argyris)], [qw(Θεόδωρος theodoros)],
+    [qw(Δημοσθένης dimosthenis)], [qw(Λεωνίδας leonidas)], [qw(Φίλιππος filippos philippos)], [qw(Ραφαήλ rafail)],
+    [qw(Ευθύμιος efthymios)], [qw(Αριστείδης aristeidis aristidis)], [qw(Μιλτιάδης miltiadis)], [qw(Σωκράτης sokratis)],
+    [qw(Πλάτων platon)], [qw(Αχιλλέας achilleas axilleas)], [qw(Οδυσσέας odysseas)], [qw(Περικλής periklis perikles)],
+    [qw(Ηρακλής iraklis herakles)], [qw(Ιάσονας iasonas)], [qw(Θάνος thanos)], [qw(Βαγγέλης vaggelis vangelis)],
+    [qw(Ζήσης zisis)], [qw(Κλεάνθης kleanthis)], [qw(Ευστάθιος efstathios)], [qw(Ιωσήφ iosif)], [qw(Εμμανουήλ emmanouil)],
+    [qw(Μαρία maria)], [qw(Ελένη eleni)], [qw(Κατερίνα katerina)], [qw(Σοφία sofia sophia)], [qw(Αναστασία anastasia)],
+    [qw(Δήμητρα dimitra)], [qw(Χριστίνα christina xristina)], [qw(Αθανασία athanasia)], [qw(Παναγιώτα panagiota)],
+    [qw(Βασιλική vasiliki vasiliki basiliki)], [qw(Γεωργία georgia)], [qw(Ευαγγελία evangelia)], [qw(Άννα anna)],
+    [qw(Ιωάννα ioanna)], [qw(Θεοδώρα theodora)], [qw(Αικατερίνη aikaterini)], [qw(Αγγελική aggeliki angeliki)], [qw(Ζωή zoi)],
+    [qw(Παρασκευή paraskevi)], [qw(Στυλιανή styliani)], [qw(Μαργαρίτα margarita)], [qw(Ειρήνη eirini irini)],
+    [qw(Αλεξάνδρα alexandra)], [qw(Δέσποινα despoina)], [qw(Φωτεινή fotini)], [qw(Ουρανία ourania)], [qw(Μαρίνα marina)],
+    [qw(Νίκη niki)], [qw(Ελισάβετ elisavet)], [qw(Κωνσταντίνα konstantina constantina)], [qw(Ελπίδα elpida)],
+    [qw(Αντωνία antonia)], [qw(Μαριάνθη marianthi)], [qw(Βάσω vaso vasw)], [qw(Πόπη popi)], [qw(Λία lia)],
+    [qw(Χρυσούλα chrysoula xrisoula)], [qw(Σταματία stamatia)], [qw(Ιφιγένεια ifigeneia)], [qw(Κλεοπάτρα kleopatra)],
+    [qw(Ανδρομάχη andromachi)], [qw(Ευτυχία eftychia)], [qw(Ελευθερία eleftheria)], [qw(Ραφαέλα rafaela)], [qw(Δάφνη dafni)],
+);
+my %GR_PHONETIC;   # sound key of a Latin or Greek spelling -> the Greek first name
+sub _greece_sound_key {
+    my $w = lc shift;
+    $w = Unicode::Normalize::NFD($w); $w =~ s/\p{M}//g;
+    $w =~ s/ου/8/g;                 # ου stays apart: Στυλιανού is not Στυλιανή
+    $w =~ tr/ςωηυ/σοιι/;
+    $w =~ s/ει|οι|υι/ι/g; $w =~ s/αι/ε/g;
+    return $w;
+}
+sub _greece_latin_to_greek_key {
+    my $w = lc shift;
+    $w =~ s/^x/χ/;
+    my $key = _greece_sound_key(_greece_translit_word($w, 0));
+    return $key;
+}
+my %GR_LATIN_PAIR = (ou => 'ου', oy => 'ου', th => 'θ', ps => 'ψ', ks => 'ξ', ch => 'χ', kh => 'χ', gk => 'γκ', gg => 'γγ',
+    mp => 'μπ', nt => 'ντ', ai => 'αι', ei => 'ει', oi => 'οι', ui => 'υι', ee => 'ει', ph => 'φ', dh => 'δ', tz => 'τζ', ts => 'τσ');
+my %GR_LATIN_ONE = (a => 'α', b => 'μπ', c => 'κ', d => 'δ', e => 'ε', f => 'φ', g => 'γ', h => 'η', i => 'ι', k => 'κ',
+    l => 'λ', m => 'μ', n => 'ν', o => 'ο', p => 'π', r => 'ρ', s => 'σ', t => 'τ', u => 'υ', v => 'β', w => 'ω', y => 'υ', z => 'ζ');
+# One lower-case Latin word in Greek letters, no accents; undef if it has a letter with no Greek counterpart.
+sub _greece_translit_word {
+    my ($w, $at_start) = @_;
+    my $out = '';
+    my $i = 0;
+    while ($i < length $w) {
+        my $two = substr($w, $i, 2);
+        my $c = substr($w, $i, 1);
+        if (length($two) == 2 && $GR_LATIN_PAIR{$two}) { $out .= $GR_LATIN_PAIR{$two}; $i += 2; next; }
+        if ($c eq 'x') { $out .= ($i == 0 || substr($w, $i - 1, 1) !~ /[aeiouy]/) ? 'χ' : 'ξ'; $i++; next; }
+        if ($c eq 'y' && $i == 0 && substr($w, 1, 1) =~ /[aeiou]/) { $out .= 'γι'; $i++; next; }
+        return undef unless $GR_LATIN_ONE{$c};
+        $out .= $GR_LATIN_ONE{$c};
+        $i++;
+    }
+    $out =~ s/σ$/ς/;
+    return $out;
+}
+# The suffixes that make a Latin word a Greek surname for certain, with their accented Greek endings.
+my @GR_SURNAME_ENDINGS = (
+    [qr/opoulos$/ => 'όπουλος'], [qr/opoulou$/ => 'όπουλου'], [qr/poulos$/ => 'πουλος'], [qr/poulou$/ => 'πουλου'],
+    [qr/iadis$/ => 'ιάδης'], [qr/iadou$/ => 'ιάδου'], [qr/idis$/ => 'ίδης'], [qr/idou$/ => 'ίδου'],
+    [qr/akis$/ => 'άκης'], [qr/akou$/ => 'άκου'], [qr/oglou$/ => 'όγλου'], [qr/ellis$/ => 'έλλης'],
+    [qr/atos$/ => 'άτος'], [qr/atou$/ => 'άτου'], [qr/akos$/ => 'άκος'], [qr/iou$/ => 'ίου'],
+);
+my $GR_WEAK_ENDING = qr/(?:os|is|as|es|ou|ias|ios|eas|aios|ikos|a|i|o)$/;
+sub _greece_first_names_ready {
+    return if %GR_PHONETIC;
+    for my $row (@GR_FIRST_NAMES) {
+        my ($greek, @latin) = @$row;
+        $GR_PHONETIC{_greece_sound_key($greek)} //= $greek;
+        for my $l (@latin) {
+            my $g = $l =~ /\p{Greek}/ ? $l : _greece_translit_word($l, 1);
+            $GR_PHONETIC{_greece_sound_key($g)} //= $greek if defined $g;
+        }
+    }
+}
+# A name's words with the Greek first names known, for either script.
+sub _greece_known_first_name {
+    my $word = shift;
+    _greece_first_names_ready();
+    my $plain = Unicode::Normalize::NFD(lc $word); $plain =~ s/\p{M}//g;
+    my @tries = $plain =~ /\p{Greek}/ ? ($plain) : do {
+        my @t;
+        for my $x ($plain, ($plain =~ /x/ ? do { (my $y = $plain) =~ s/x/ch/g; $y } : ())) {
+            my $g = _greece_translit_word($x, 1);
+            push @t, $g if defined $g;
+        }
+        @t;
+    };
+    for my $t (@tries) {
+        my $hit = $GR_PHONETIC{_greece_sound_key($t)};
+        return $hit if $hit;
+    }
+    return undef;
+}
+# The name with Greek letters where it is greeklish; the name itself otherwise.
+sub greece_name_normalise {
+    my ($self, $name) = @_;
+    $name = $name // '';
+    $name =~ s/\s+/ /g; $name =~ s/^ | $//g;
+    return $name unless $name =~ /^[A-Za-z]+(?:[ '\-][A-Za-z]+)*\.?$/;   # Latin letters only
+    require Unicode::Normalize;
+    my @words = split /([ \-])/, $name;
+    my (@out, $sure, $all_ok);
+    $all_ok = 1;
+    my $caps = $name eq uc $name && $name =~ /[A-Z]{2}/;
+    for my $w (@words) {
+        if ($w =~ /^[ \-]$/) { push @out, $w; next; }
+        (my $bare = $w) =~ s/[.']//g;
+        next unless length $bare;
+        my $lower = lc $bare;
+        my $first = _greece_known_first_name($lower);
+        if ($first) { push @out, $first; $sure = 1; next; }
+        my $greek = _greece_translit_word($lower, 1);
+        if (!defined $greek) { $all_ok = 0; last; }
+        $greek =~ s/^γεοργ/γεωργ/;   # Georgiou
+        my $strong;
+        for my $e (@GR_SURNAME_ENDINGS) {
+            next unless $lower =~ $e->[0];
+            my $stem = $lower; $stem =~ s/$e->[0]//;
+            my $g = _greece_translit_word($stem, 1);
+            if (defined $g) { $g =~ s/^γεοργ/γεωργ/; $greek = $g . $e->[1]; $strong = 1; last; }
+        }
+        if ($strong) { $sure = 1; }
+        elsif ($lower !~ $GR_WEAK_ENDING) { $all_ok = 0; last; }
+        push @out, $greek;
+    }
+    return $name unless $all_ok && $sure && @out;
+    my $result = join '', @out;
+    if ($caps) {
+        $result = Unicode::Normalize::NFD($result); $result =~ s/\p{M}//g; $result = uc $result;   # capitals carry no accents
+    } else {
+        $result = join '', map { /^[ \-]$/ ? $_ : ucfirst $_ } split /([ \-])/, $result;
+    }
+    return Unicode::Normalize::NFC($result);
+}
+my %GR_KEY_ROWS = map { $_ => 1 } qw(qwertyuiop asdfghjkl zxcvbnm ερτυθιοπ ασδφγηξκλ ζχψωβνμ);
+# Why a name is not a real one, or '' when it may be.
+sub greece_name_nonsense {
+    my ($self, $name) = @_;
+    require Unicode::Normalize;
+    return 1 if $name =~ /[^\p{L}\p{M} .'\-]/;     # digits, symbols
+    return 0 if $GREECE_NO_NAME{lc $name} || lc $name eq 'ανώνυμος πολίτης';
+    my @words = grep { length } split /[ \-]+/, $name;
+    my $long = grep { (my $b = $_) =~ s/[^\p{L}]//g; length $b >= 3 } @words;
+    return 1 unless $long || (@words == 1 && length($words[0]) >= 4);
+    for my $w (@words) {
+        (my $b = $w) =~ s/[^\p{L}\p{M}]//g;
+        next if length($b) <= 1 && @words > 1;
+        my $plain = Unicode::Normalize::NFD(lc $b); $plain =~ s/\p{M}//g; $plain =~ tr/ς/σ/;
+        next if _greece_known_first_name($b);
+        return 1 if $plain =~ /(.)\1\1/;                              # aaa
+        my $len = length $plain;
+        return 1 if $len >= 4 && $plain !~ /[αεηιουωaeiouy]/;           # no vowel
+        return 1 if $plain =~ /[^αεηιουωaeiouy]{5,}/;                    # five consonants in a row
+        my %distinct = map { $_ => 1 } split //, $plain;
+        return 1 if $len >= 6 && keys %distinct <= $len / 2;             # asdfasdf
+        if ($len >= 6) {
+            for my $row (keys %GR_KEY_ROWS) {
+                return 1 unless grep { index($row, $_) < 0 } keys %distinct;   # all letters from one keyboard row
+            }
+        }
+    }
+    return 0;
 }
 
 # The text on one line, cut at a word to at most $max characters, with "…" if cut.
