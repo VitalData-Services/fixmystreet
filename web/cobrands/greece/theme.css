@@ -1694,3 +1694,9 @@ body #front-recently .full-width { margin: 0 !important; }
     :root:not([data-theme="light"]) .gr-status--sent { --gr-st: #5eead4; } :root:not([data-theme="light"]) .gr-status--pending, :root:not([data-theme="light"]) .gr-status--review { --gr-st: #fbbf24; }
     :root:not([data-theme="light"]) .gr-status--closed, :root:not([data-theme="light"]) .gr-status--info { --gr-st: #cbd5e1; } }
 .gr-minimap__status:empty { display: none; }
+
+/* Pilot notice above the steps on the home page (2026-10-30): bold, strong colour. */
+.gr-pilot { display: flex; align-items: center; gap: 0.7em; margin: 0 0 1em; padding: 0.85em 1.1em; border-radius: var(--gr-radius); border-left: 6px solid #c2410c; background: #fff1e6; color: #9a3412; font-weight: 800; font-size: 1.0625rem; line-height: 1.35; }
+.gr-pilot svg { flex: none; color: #ea580c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .gr-pilot { background: #3a1d0b; color: #fdba74; border-left-color: #fb923c; } :root:not([data-theme="light"]) .gr-pilot svg { color: #fb923c; } }
+:root[data-theme="dark"] .gr-pilot { background: #3a1d0b; color: #fdba74; border-left-color: #fb923c; }
