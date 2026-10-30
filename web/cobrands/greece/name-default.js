@@ -33,7 +33,8 @@
         if (hint) { hint.textContent = EN ? ' (optional with a photo)' : ' (προαιρετικό με φωτογραφία)'; }
         form.addEventListener('submit', function(e) {
             var v = box.value.trim();
-            if (hasPhoto(form) || (v !== '' && v !== box.dataset.grDefault)) { return; }
+            // A police complaint (the name box is locked to «Ανώνυμος») is anonymous and needs no photo.
+            if (box.readOnly || hasPhoto(form) || (v !== '' && v !== box.dataset.grDefault)) { return; }
             e.preventDefault();
             e.stopImmediatePropagation();
             var p = form.querySelector('.gr-name-need');

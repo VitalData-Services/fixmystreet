@@ -192,7 +192,8 @@ sub greece_default_name {
         return;
     }
     # A report without a photo needs a name (owner, 2026-10-26): report_check_for_errors says so.
-    if ($c->req->path =~ m{^report/new/?$} && !greece_has_photo($c)) {
+    # (Not a police complaint: it is anonymous by itself and needs no photo, owner 2026-10-30.)
+    if ($c->req->path =~ m{^report/new/?$} && !greece_has_photo($c) && ($c->req->params->{category} // '') ne $self->GREECE_COMPLAINT) {
         $c->stash->{greece_name_needed} = 1;
         $c->req->params->{name} = '';
         return;
