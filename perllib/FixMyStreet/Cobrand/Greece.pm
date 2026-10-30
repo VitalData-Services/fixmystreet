@@ -1352,6 +1352,28 @@ my %REGION = (
     'Βορείου Αιγαίου' => 'Βόρειο Αιγαίο', 'Νοτίου Αιγαίου' => 'Νότιο Αιγαίο', 'Κρήτης' => 'Κρήτη',
 );
 
+# The title of a report in the visitor's language. Titles are the (Greek) category names; on the English site the known
+# ones are shown in English, anything else (a title the reporter wrote) stays as written.
+my %CATEGORY_EN = (
+    'Άλλο' => 'Other',
+    'Εμπόδιο σε πεζοδρόμιο (τραπεζοκαθίσματα, αντικείμενα)' => 'Obstruction on a pavement (tables, objects)',
+    'Κατάληψη κοινόχρηστου χώρου' => 'Occupation of public space',
+    'Λακκούβα ή φθορά οδοστρώματος' => 'Pothole or road surface damage',
+    'Οδοφωτισμός' => 'Street lighting',
+    'Πράσινο και δέντρα' => 'Greenery and trees',
+    'Πρόβλημα με πεζοδρόμιο' => 'Pavement problem',
+    'Στάθμευση σε θέση ΑμεΑ ή φορτιστή EV' => 'Parking in a disabled bay or EV charging bay',
+    'Στάθμευση σε ράμπα ή θέση ΑμεΑ, πεζοδρόμιο ή διάβαση' => 'Parking on a ramp, disabled bay, pavement or crossing',
+    'Στάθμευση σε φορτιστή EV ή εμπόδιο στη διέλευση' => 'Parking at an EV charger or blocking passage',
+    'Φθαρμένο πεζοδρόμιο ή ράμπα ΑμεΑ' => 'Damaged pavement or accessibility ramp',
+    'Φρεάτια και καθαριότητα' => 'Drains and cleanliness',
+);
+sub greece_title {
+    my ($self, $english) = @_;
+    my $t = $self->title;
+    return $english && $CATEGORY_EN{$t} ? $CATEGORY_EN{$t} : $t;
+}
+
 # The address of the report as written in Greece, e.g. "Φαβιέρου 15, 124 61 Χαϊδάρι, Αττική".
 sub greece_address {
     my ($self, $cobrand) = @_;

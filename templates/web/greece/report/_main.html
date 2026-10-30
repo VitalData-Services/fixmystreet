@@ -1,0 +1,138 @@
+[%# Copy of FixMyStreet's report/_main.html showing the title in the visitor's language (greece_title, 2026-10-30). ~%]
+[%
+USE date;
+can_moderate = permissions.moderate OR c.user.can_moderate(problem, staff = permissions.moderate)
+can_moderate_title = c.user.can_moderate_title(problem, can_moderate)
+%]
+
+[% INCLUDE 'report/_back_to_all.html' %]
+[% INCLUDE 'report/banner.html' %]
+
+<div class="problem-header clearfix
+    [%~ ' show-moderation' IF show_moderation == 'report' ~%]
+    " data-lastupdate="[% problem.lastupdate %]">
+
+[% IF permissions.planned_reports %]
+<form method="post" action="/my/planned/change" id="planned_form" class="hidden-label-target">
+    <input type="hidden" name="id" value="[% problem.id %]">
+    <input type="hidden" name="token" value="[% csrf_token %]">
+    <input type="hidden" name="[% IF c.user.is_planned_report(problem) %]shortlist-remove[% ELSE %]shortlist-add[% END %]" value="1">
+</form>
+[% END %]
+
+  [% IF can_moderate %]
+    <form method="post" action="/moderate/report/[% problem.id %]">
+        <input type="hidden" name="token" value="[% csrf_token %]">
+        <input type="hidden" name="form_started" value="[% date.now %]">
+  [% END %]
+
+  [% FOR error IN moderate_errors %]
+    <p class="form-error js-moderation-error">[% error | safe %]</p>
+  [% END %]
+
+  [% IF can_moderate_title %]
+    <h1 class="moderate-display">[% problem.greece_title(c.stash.lang_code == 'en-gb') | html %]</h1>
+    <div class="moderate-edit">
+      [% IF problem.title != original.title %]
+        <label>
+            <input type="checkbox" name="problem_revert_title" class="revert-title"[% " checked" IF c.req.params.problem_revert_title %]>
+            [% loc('Revert to original title') %]
+        </label>
+      [% END %]
+        <h1><input class="form-control" type="text" name="problem_title" value="[% (c.req.params.problem_title || problem.title) | html %]" data-original-value="[% original.title | html %]"></h1>
+    </div>
+  [% ELSE %]
+    <h1>[% problem.greece_title(c.stash.lang_code == 'en-gb') | html %]</h1>
+  [% END %]
+
+    <div class="moderate-edit">
+        <label>
+            <input type="checkbox" name="problem_show_name" [% 'checked' IF !problem.anonymous OR c.req.params.problem_show_name %]>
+            [% loc('Show reporter&rsquo;s name') %]
+        </label>
+    </div>
+    <p class="report_meta_info">
+        [% INCLUDE 'report/_report_meta_info.html' %]
+    </p>
+
+    [% IF anonymized ~%]
+        <p class="form-success">[% anonymized %]</p>
+    [% END ~%]
+
+    [% INCLUDE 'report/_main_sent_info.html' %]
+    [% mlog = problem.latest_moderation_log_entry(); IF mlog %]
+        <p>[% tprintf(loc('Moderated by %s at %s'), mlog.admin_user, prettify_dt(mlog.whenedited)) %]</p>
+    [% END %]
+
+    [% INCLUDE 'report/_support.html' %]
+
+    [% INCLUDE 'report/photo.html' object=problem %]
+
+    <div class="moderate-display">
+        [% problem.detail | add_links | html_para %]
+    </div>
+
+  [% IF can_moderate %]
+    <p class="moderate-edit">
+      [% IF problem.detail != original.detail %]
+        <label>
+            <input type="checkbox" name="problem_revert_detail" class="revert-textarea"[% ' checked' IF c.req.params.problem_revert_detail %]>
+            [% loc('Revert to original text') %]
+        </label>
+      [% END %]
+        <textarea class="form-control" name="problem_detail" data-original-value="[% original.detail | html %]">[% (c.req.params.problem_detail || problem.detail) | html %]</textarea>
+    </p>
+
+    <div class="moderate-edit">
+        <p>
+            <label>
+                <input type="checkbox" class="hide-document" name="problem_hide" [% 'checked' IF problem.hidden OR c.req.params.problem_hide %]>
+                [% loc('Hide entire report') %]
+            </label>
+        </p>
+        <p>
+            <label for="moderation_reason">[% loc('Describe why you are moderating this') %]</label>
+            <input type="text" class="form-control" name="moderation_reason" value="[% (c.req.params.moderation_reason || '') | html %]">
+        </p>
+        <p>
+            <input type="submit" class="btn btn--primary" value="[% loc('Save changes') %]">
+            <input type="button" class="hidden-nojs btn cancel" value="[% loc('Discard changes') %]">
+        </p>
+    </div>
+  [% END %]
+
+  [% IF can_moderate %]
+    </form>
+  [% END %]
+
+  [% IF can_moderate OR permissions.planned_reports %]
+    <div class="moderate-display segmented-control" role="menu">
+      [% IF can_moderate %]
+        <a class="js-moderate btn" role="menuitem" href="/report/[% problem.id %]/moderate"
+            aria-label="[% loc('Moderate this report') %]">[% loc('Moderate') %]</a>
+      [% END %]
+      [% IF permissions.planned_reports %]
+        <button class="btn [% IF c.user.is_planned_report(problem) %]btn--shortlisted[% ELSE %]btn--shortlist[% END %]" 
+                form="planned_form" 
+                aria-label="[% IF c.user.is_planned_report(problem) %][% loc('Remove from shortlist') %][% ELSE %][% loc('Add to shortlist') %][% END %]"
+                data-label-remove="[% loc('Remove from shortlist') %]" 
+                data-value-remove="[% loc('Shortlisted') %]" 
+                data-class-remove="btn--shortlisted" 
+                data-label-add="[% loc('Add to shortlist') %]" 
+                data-value-add="[% loc('Shortlist') %]" 
+                data-class-add="btn--shortlist">
+            [% IF c.user.is_planned_report(problem) %][% loc('Shortlisted') %][% ELSE %][% loc('Shortlist') %][% END %]
+        </button>
+      [% END %]
+    </div>
+  [% END %]
+
+  [% IF permissions.planned_reports AND problem.shortlisted_user AND NOT c.user.is_planned_report(problem) %]
+    <div class="moderate-display shortlisted-status">
+      <h3>[% tprintf(loc('Shortlisted by %s'), problem.shortlisted_user.name) %]</h3>
+      <p>[% tprintf(loc('Adding this report to your shortlist will remove it from %s’s shortlist.'), problem.shortlisted_user.name) %]</p>
+    </div>
+  [% END %]
+
+  [% PROCESS 'report/_main_after.html' %]
+</div>

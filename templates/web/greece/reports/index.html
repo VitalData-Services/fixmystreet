@@ -150,11 +150,11 @@
         <table class="dashboard-ranking-table">
             <tbody>
               [% FOR line IN top_five_bodies %]
-                <tr><td>[% line.name %]</td><td>[% tprintf(nget("%s day", "%s days", line.days), line.days) %]</td></tr>
+                <tr><td>[% line.name %]</td><td>[% IF line.days < 1 %][% c.cobrand.greece_t("λιγότερο από 1 ημέρα", "less than 1 day") %][% ELSE %][% tprintf(nget("%s day", "%s days", line.days), line.days) %][% END %]</td></tr>
               [% END %]
             </tbody>
             <tfoot>
-                <tr><td>[% loc('Overall average') %]</td><td>[% tprintf(nget("%s day", "%s days", average), average) %]</td></tr>
+                <tr><td>[% loc('Overall average') %]</td><td>[% IF average < 1 %][% c.cobrand.greece_t("λιγότερο από 1 ημέρα", "less than 1 day") %][% ELSE %][% tprintf(nget("%s day", "%s days", average), average) %][% END %]</td></tr>
             </tfoot>
         </table>
         [% END %]
