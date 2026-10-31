@@ -680,9 +680,12 @@ sub greece_digest_next {
     my @bodies = FixMyStreet::DB->resultset('Body')->search({ id => \@ids })->all;
     return unless @bodies && !grep { ($_->send_method // '') ne 'Noop' || ($_->extra || {})->{greece_police} } @bodies;
     my $now = DateTime->now(time_zone => 'Europe/Athens');
-    my ($next) = grep { $_ > $now->hour } 9, 14;
+    # The digest runs Monday to Friday (day_of_week: 1 Monday .. 7 Sunday).
+    my $dow = $now->day_of_week;
+    my ($next) = $dow <= 5 ? (grep { $_ > $now->hour } 9, 14) : ();
     return sprintf('%02d:00', $next) if $next;
-    return $self->greece_t('αύριο', 'tomorrow') . ' 09:00';
+    return $self->greece_t('αύριο', 'tomorrow') . ' 09:00' if $dow <= 4 || $dow == 7;
+    return $self->greece_t('τη Δευτέρα', 'on Monday') . ' 09:00';
 }
 
 # The status of a user, for the admin's Users page (2026-10-31): «protected» (the anonymous account, which no action touches),

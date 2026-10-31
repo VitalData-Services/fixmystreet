@@ -10,7 +10,7 @@ FixMyStreet::App::Controller::GreeceApprove - an admin approves the municipaliti
 =head1 DESCRIPTION
 
 Reports to the municipalities leave in a batch (bin/greece/send-digest, at 09:00 and
-14:00 Athens time, every day), and only once a superuser has approved them here. A report that is not approved
+14:00 Athens time, Monday to Friday), and only once a superuser has approved them here. A report that is not approved
 stays public and waits; the digest emails the contact address at each batch time while any wait.
 Complaints to the police do not come here: they go at once.
 

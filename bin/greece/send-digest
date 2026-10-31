@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Sends the municipalities' reports as one email per destination address, twice a day
-# (owner, 2026-10-31): at 09:00 and 14:00 Athens time, every day, each with what came in since the
+# (owner, 2026-10-31): at 09:00 and 14:00 Athens time, Monday to Friday, each with what came in since the
 # last one (so the 09:00 email has the night's). Police reports are not held: they go at once,
 # through send-reports, as before.
 #
@@ -58,7 +58,8 @@ sub main {
     GetOptionsFromArray(\@args, \%opt, 'force', 'dry-run', 'to=s') or return 2;
     my $tz = 'Europe/Athens';
     my $now = DateTime->now(time_zone => $tz);
-    return 0 unless $opt{force} || $opt{'dry-run'} || grep { $_ == $now->hour } @HOURS;
+    # Monday to Friday only (owner, 2026-10-31): the weekend's reports go on Monday at 09:00.
+    return 0 unless $opt{force} || $opt{'dry-run'} || ($now->day_of_week <= 5 && grep { $_ == $now->hour } @HOURS);
 
     open my $lock, '>', '/tmp/fms-greece-digest.lock' or die "lock: $!\n";
     flock($lock, LOCK_EX | LOCK_NB) or do { print "another run is going\n"; return 0 };
