@@ -1781,3 +1781,4 @@ body.admin .sticky-sidebar, body.admin .sticky-sidebar aside { background: trans
 .gr-ust--disabled { background: #fff1d6; color: #7a4a00; }
 .gr-ust--deleted { background: #e8ecf2; color: var(--gr-ink-3); }
 .gr-ust--staff { background: var(--gr-accent-soft); color: var(--gr-accent-ink); }
+.gr-ust--protected { background: #ede7fb; color: #4c1d95; }

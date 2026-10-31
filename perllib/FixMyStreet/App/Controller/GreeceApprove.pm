@@ -83,9 +83,11 @@ sub users_action : Path('/admin/greece/users-action') : Args(0) {
     my @ids = grep { /^\d+$/ } $c->get_param_list('uid');
     my @users = @ids ? $c->model('DB::User')->search({ id => \@ids })->all : ();
     my ($n, $skipped) = (0, 0);
+    my $anon = $c->cobrand->anonymous_account;
+    my $anon_user = $anon && $c->model('DB::User')->find({ email => $anon->{email} });
     for my $u (@users) {
         my $status = $c->cobrand->greece_user_status($u);
-        if ($u->id == $c->user->id || $u->is_superuser
+        if ($status eq 'protected' || $u->id == $c->user->id || $u->is_superuser
             || ($act eq 'delete' && ($u->from_body || $status eq 'deleted'))
             || ($act ne 'delete' && $status eq 'deleted')) {
             $skipped++;
@@ -101,8 +103,25 @@ sub users_action : Path('/admin/greece/users-action') : Args(0) {
         } elsif ($act eq 'enable') {
             $c->model('DB::Abuse')->search({ email => \@names })->delete if @names;
         } else {
+            unless ($anon_user) { $skipped++; next; }
             $c->forward('/admin/users/user_logout_everywhere', [ $u ]);
+            my $email_was = $u->email;
+            # The reports and updates move to the one anonymous account (anonymous@..., it cannot be deleted); the
+            # phone and Cc address given with a report go. The deleted account itself is emptied (removed-N@...).
+            for my $p ($u->problems->all) {
+                $p->unset_extra_metadata($_) for qw(greece_phone greece_cc);
+                $p->user_id($anon_user->id);
+                $p->name($anon->{name});
+                $p->anonymous(1);
+                $p->update;
+            }
+            $u->comments->update({ user_id => $anon_user->id, name => $anon->{name}, anonymous => 1 });
             $u->anonymize_account;
+            $u->unset_extra_metadata('greece_lang');
+            $u->update;
+            my $dbh = $c->model('DB')->schema->storage->dbh;
+            $dbh->do(q{DELETE FROM token WHERE data->>'email' = ? OR data->>'id' = ?}, undef, $email_was, $u->id);
+            $dbh->do('DELETE FROM partial_user WHERE lower(email) = lower(?)', undef, $email_was);
         }
         $c->forward('/admin/log_edit', [ $u->id, 'user', 'edit' ]);
         $n++;

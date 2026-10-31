@@ -28,7 +28,7 @@
 </strong></p>
 [% END %]
 [% SET gr_counts = c.cobrand.greece_user_counts %]
-[% SET gr_stname = { active => 'Ενεργός', disabled => 'Απενεργοποιημένος', deleted => 'Διαγραμμένος', staff => 'Προσωπικό' } %]
+[% SET gr_stname = { active => 'Ενεργός', disabled => 'Απενεργοποιημένος', deleted => 'Διαγραμμένος', staff => 'Προσωπικό', protected => 'Προστατευμένος' } %]
 [% SET gr_cur = c.req.params.status %]
 <nav class="gr-statusbar" aria-label="Κατάσταση χρηστών">
     <span class="gr-statusbar__label" data-gr-tip="Φιλτράρει τη λίστα ανά κατάσταση. Ενεργός: κανονικός λογαριασμός. Απενεργοποιημένος: δεν μπορεί να κάνει αναφορές. Διαγραμμένος: τα στοιχεία του έχουν σβηστεί. Προσωπικό: υπάλληλοι φορέων και διαχειριστές.">Κατάσταση</span>
@@ -84,7 +84,7 @@
     </tr>
 [%- FOREACH user IN users %]
     <tr>
-        <td align="center"><input type="checkbox" name="uid" value="[% user.id %]" id="uid[% user.id %]" class="gr-users-box"></td>
+        <td align="center">[% IF c.cobrand.greece_user_status(user) == 'protected' %]🔒[% ELSE %]<input type="checkbox" name="uid" value="[% user.id %]" id="uid[% user.id %]" class="gr-users-box">[% END %]</td>
         <td><label class="inline" for="uid[% user.id %]">
             [% PROCESS value_or_nbsp value=user.name %]
         </label></td>
