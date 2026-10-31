@@ -1782,3 +1782,11 @@ body.admin .sticky-sidebar, body.admin .sticky-sidebar aside { background: trans
 .gr-ust--deleted { background: #e8ecf2; color: var(--gr-ink-3); }
 .gr-ust--staff { background: var(--gr-accent-soft); color: var(--gr-accent-ink); }
 .gr-ust--protected { background: #ede7fb; color: #4c1d95; }
+
+/* The confirmation page after a report: smaller tick and text, so the SMS button and the number are in view (2026-10-31). */
+.confirmation-header { padding-top: 72px; padding-bottom: 1em; background-size: 52px; background-position: center .6em; }
+.confirmation-header h1 { margin: 0 0 .35em; font-size: 1.15rem; line-height: 1.3; }
+.confirmation-header h1 a { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.confirmation-header h2 { font-size: 1.05rem; line-height: 1.3; }
+.confirmation-header p { font-size: .95rem; }
+@media (min-width: 48em) { .confirmation-header { width: auto; max-width: 34em; padding: 84px 0 1.5em; background-position: center .6em; text-align: center; } }
