@@ -1,5 +1,7 @@
 [%# Confirmation page after a report: reports need no account or email confirmation (Greece.pm). ~%]
 <h2>[% c.cobrand.greece_t('Ευχαριστούμε για την αναφορά!', 'Thank you for your report!') %]</h2>
+[%# The SMS to the police first, so it can be pressed without scrolling (2026-10-31). ~%]
+[% INCLUDE 'report/_greece_sms.html' sms_report = report %]
 <p>[% c.cobrand.greece_t('Αριθμός αναφοράς:', 'Report number:') %] [% IF report.state != 'hidden' AND NOT report.non_public ~%]
 <a href="[% c.cobrand.base_url_for_report(report) %][% report.url %]"><strong>[% report.greece_ref %]</strong></a>
 [%~ ELSE ~%]<strong>[% report.greece_ref %]</strong>[%~ END ~%].

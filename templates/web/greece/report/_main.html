@@ -7,6 +7,8 @@ can_moderate_title = c.user.can_moderate_title(problem, can_moderate)
 
 [% INCLUDE 'report/_back_to_all.html' %]
 [% INCLUDE 'report/banner.html' %]
+[%# The SMS to the police is for the reporter only; at the top so it can be pressed without scrolling (2026-10-31). ~%]
+[% IF c.user_exists AND c.user.id == problem.user_id %][% INCLUDE 'report/_greece_sms.html' sms_report = problem %][% END %]
 
 <div class="problem-header clearfix
     [%~ ' show-moderation' IF show_moderation == 'report' ~%]
