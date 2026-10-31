@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
-# Sends the municipalities' reports as one email per destination address, three times a day
-# (owner, 2026-10-26): at 07:00, 13:00 and 19:00 Athens time, each with what came in since the
-# last one (so the 07:00 email has the night's). Police reports are not held: they go at once,
+# Sends the municipalities' reports as one email per destination address, twice a day
+# (owner, 2026-10-31): at 09:00 and 14:00 Athens time, every day, each with what came in since the
+# last one (so the 09:00 email has the night's). Police reports are not held: they go at once,
 # through send-reports, as before.
 #
 # How the two do not overlap: the municipalities' bodies have send_method Noop
@@ -42,7 +42,7 @@ use Digest::SHA ();
 
 binmode STDOUT, ':utf8';
 
-our @HOURS = (1, 7, 13, 19);    # Europe/Athens
+our @HOURS = (9, 14);    # Europe/Athens
 
 sub notify_waiting {
     my ($schema, $cobrand, $count) = @_;

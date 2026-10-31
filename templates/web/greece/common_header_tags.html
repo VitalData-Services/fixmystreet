@@ -55,6 +55,8 @@ if ('serviceWorker' in navigator) {
     <meta name="robots" content="noindex,nofollow">
 [% ELSIF c.cobrand.greece_t(0, 1) %]
     <meta name="robots" content="noindex,follow">
+[% ELSIF c.action == 'report/display' AND c.stash.problem AND NOT c.cobrand.greece_report_indexable(c.stash.problem) %]
+    <meta name="robots" content="noindex,nofollow">
 [% ELSIF robots %]
     <meta name="robots" content="[% robots %]">
 [%# A municipality's reports page (/reports/<Δήμος>, action reports/body or reports/ward) without any

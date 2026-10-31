@@ -64,6 +64,7 @@ SQL
         { non_public => 0, state => { -not_in => [ 'unconfirmed', 'hidden', 'partial' ] } },
         { order_by => { -desc => 'lastupdate' }, rows => 45000 } );
     while ( my $p = $problems->next ) {
+        $c->cobrand->greece_report_indexable($p) or next;
         my $path = $p->url or next;
         ( my $day = $p->lastupdate . '' ) =~ s/[ T].*//;
         $url->( $path, 'weekly', '0.4', $day );

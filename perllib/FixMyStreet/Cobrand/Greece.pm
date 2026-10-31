@@ -670,9 +670,9 @@ sub greece_mark_email_confirmed {
     $report->set_extra_metadata(greece_email_confirmed => 1) if $ok;
 }
 
-# A municipality's reports go in its digest, at 07:00, 13:00 and 19:00 (bin/greece/send-digest; its
+# A municipality's reports go in its digest, at 09:00 and 14:00, every day (bin/greece/send-digest; its
 # bodies have send_method Noop, data/greece/contacts/digest.sql). For a report still waiting for it,
-# when the next one goes, e.g. «13:00» or «αύριο 07:00»; nothing for a report sent at once.
+# when the next one goes, e.g. «14:00» or «αύριο 09:00»; nothing for a report sent at once.
 sub greece_digest_next {
     my ($self, $report) = @_;
     return if !$report || $report->whensent || !$report->bodies_str;
@@ -680,9 +680,9 @@ sub greece_digest_next {
     my @bodies = FixMyStreet::DB->resultset('Body')->search({ id => \@ids })->all;
     return unless @bodies && !grep { ($_->send_method // '') ne 'Noop' || ($_->extra || {})->{greece_police} } @bodies;
     my $now = DateTime->now(time_zone => 'Europe/Athens');
-    my ($next) = grep { $_ > $now->hour } 1, 7, 13, 19;
+    my ($next) = grep { $_ > $now->hour } 9, 14;
     return sprintf('%02d:00', $next) if $next;
-    return $self->greece_t('αύριο', 'tomorrow') . ' 01:00';
+    return $self->greece_t('αύριο', 'tomorrow') . ' 09:00';
 }
 
 # The admin's Users page lists every user, 20 to a page (?p=N), until a search narrows it (FixMyStreet
@@ -711,6 +711,18 @@ sub greece_needs_approval {
     my @ids = grep { /^\d+$/ } split /,/, $report->bodies_str;
     my $ok = $self->greece_digest_body_ids;
     return @ids && !grep({ !$ok->{$_} } @ids) ? 1 : 0;
+}
+
+# Whether search engines may list a report (2026-10-31): not a complaint to the Police, and not a municipality's
+# report that nobody has approved yet; those pages are «noindex» and left out of the sitemap.
+sub greece_report_indexable {
+    my ($self, $report) = @_;
+    return 0 if !$report || $report->non_public;
+    my $police = $self->{greece_police_body_ids} //= { map { $_->id => 1 }
+        grep { ($_->extra || {})->{greece_police} }
+        FixMyStreet::DB->resultset('Body')->search({ deleted => 0 })->all };
+    return 0 if grep { $police->{$_} } grep { /^\d+$/ } split /,/, ($report->bodies_str // '');
+    return $self->greece_needs_approval($report) ? 0 : 1;
 }
 
 # Whether the municipalities' digest is on (any municipality with send_method Noop), for the FAQ.
