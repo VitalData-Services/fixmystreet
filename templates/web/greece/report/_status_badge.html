@@ -32,4 +32,8 @@
   [%~ ELSIF gr_ico == 'send' %]<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
   [%~ ELSE %]<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
   [%~ END %]</svg>[% END %]
-[% IF compact %]<span class="gr-status gr-status--sm gr-status--[% gr_cls %]" title="[% gr_lbl | html %]">[% PROCESS gr_status_svg gr_size = 15 %]<span>[% gr_lbl %]</span></span>[% ELSE %]<p class="gr-status gr-status--[% gr_cls %]" role="status">[% PROCESS gr_status_svg gr_size = 22 %]<span>[% gr_lbl %]</span></p>[% END %]
+[% IF compact %]<span class="gr-status gr-status--sm gr-status--[% gr_cls %]" title="[% gr_lbl | html %]">[% PROCESS gr_status_svg gr_size = 15 %]<span>[% gr_lbl %]</span></span>[% ELSE %]<p class="gr-status gr-status--[% gr_cls %]" role="status">[% PROCESS gr_status_svg gr_size = 22 %]<span>[% gr_lbl %]</span></p>
+[%- IF gr_cls == 'sent' %]
+<p class="gr-status-note">[% c.cobrand.greece_t('Η αναφορά παραδόθηκε στον διακομιστή email της υπηρεσίας. Αυτό δεν σημαίνει ότι την διάβασε ή ότι θα το διορθώσει.', 'The report reached the service’s mail server. This does not mean they read it or will fix it.') %] <a href="/faq#statuses">[% c.cobrand.greece_t('Περισσότερα', 'More') %]</a></p>
+[%- END %]
+[% END %]
