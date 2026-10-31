@@ -22,6 +22,7 @@ sub handbook : Path('/admin/greece/handbook') : Args(0) {
     $c->detach('/page_error_404_not_found', []) unless $c->cobrand->moniker eq 'greece';
     return $c->res->redirect('/auth?r=/admin/greece/handbook') unless $c->user_exists;
     $c->detach('/page_error_403_access_denied', ['']) unless $c->user->is_superuser;
+    $c->forward('/admin/set_allowed_pages');   # the admin menu needs it, as on FixMyStreet's own admin pages
     $c->stash->{template} = 'admin/greece_handbook.html';
 }
 

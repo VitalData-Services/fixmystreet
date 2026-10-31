@@ -56,6 +56,7 @@ sub approve : Path('/admin/greece/approve') : Args(0) {
     $c->stash->{csrf_token} = $c->forward('/auth/get_csrf_token');
     $c->stash->{waiting} = \@waiting;
     $c->stash->{done} = $c->get_param('done');
+    $c->forward('/admin/set_allowed_pages');   # the admin menu needs it, as on FixMyStreet's own admin pages
     $c->stash->{template} = 'admin/greece_approve.html';
 }
 

@@ -1758,3 +1758,6 @@ body.admin dt { color: var(--gr-ink-2); }
 body.admin .admin-index-search { margin: 0 0 1.4em; padding: 1em 1.1em; background: var(--gr-surface); border: 1px solid var(--gr-line); border-radius: var(--gr-radius); box-shadow: var(--gr-shadow-1); }
 body.admin .adminhidden { color: var(--gr-ink-3); }
 body.admin .error { color: var(--gr-danger); }
+
+/* The admin menu column: no coloured band behind the card (the base sticky sidebar paints one). */
+body.admin .sticky-sidebar, body.admin .sticky-sidebar aside { background: transparent !important; box-shadow: none; border: 0; }

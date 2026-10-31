@@ -114,6 +114,7 @@ sub list : Path('/admin/greece/requests') : Args(0) {
     $c->stash->{requests} = $rows;
     $c->stash->{kinds} = [ map { { key => $_, label => $KINDS{$_} } } qw(access erase rectify object recall privacy notice) ];
     $c->stash->{csrf_token} = $c->forward('/auth/get_csrf_token');
+    $c->forward('/admin/set_allowed_pages');   # the admin menu needs it, as on FixMyStreet's own admin pages
     $c->stash->{template} = 'admin/greece_requests.html';
 }
 
@@ -161,6 +162,7 @@ sub one : Path('/admin/greece/requests') : Args(1) {
     $c->stash->{r} = $r;
     $c->stash->{statuses} = [ map { { key => $_, label => $STATUSES{$_} } } qw(new waiting ready answered) ];
     $c->stash->{csrf_token} = $c->forward('/auth/get_csrf_token');
+    $c->forward('/admin/set_allowed_pages');   # the admin menu needs it, as on FixMyStreet's own admin pages
     $c->stash->{template} = 'admin/greece_request.html';
 }
 
