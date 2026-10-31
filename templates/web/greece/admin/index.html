@@ -1,0 +1,119 @@
+[%# Copy of FixMyStreet's admin/index.html (the Summary) with the approval list added; see below. ~%]
+[% INCLUDE 'admin/header.html' title=loc('Summary') -%]
+[% PROCESS 'admin/report_blocks.html' %]
+
+[% PROCESS 'admin/_index_intro.html' %]
+
+[% IF bodies.size == 0 %]
+  <p class="fms-admin-info">
+    [% loc('Currently no bodies have been created.') %]
+    <br>
+    [% tprintf( loc('You need to <a href="%s">add some bodies</a> (such as councils or departments) before any reports can be sent.'), c.uri_for('bodies')) %]
+  </p>
+[% END %]
+
+<div class="admin-index-search clearfix">
+
+[% IF c.user.has_body_permission_to('report_edit') || c.user.has_body_permission_to('user_edit') %]
+<form method="get" action="[% c.uri_for('reports') %]" accept-charset="utf-8">
+    <label for="search_reports">[% loc('Search Reports') %]</label>
+    <div class="form-txt-submit-box">
+        <input type="text" class="form-control" name="search"  size="30" id="search_reports" value="[% searched | html %]">
+        <input type="submit" class="btn" value="[% loc('Go') %]">
+    </div>
+</form>
+[% END %]
+
+[% IF c.user.has_body_permission_to('user_edit') %]
+<form method="get" action="[% c.uri_for('users') %]" accept-charset="utf-8">
+    <label for="search_users">[% loc('Search Users') %]</label>
+    <div class="form-txt-submit-box">
+        <input type="text" class="form-control" name="search"  size="30" id="search_users" value="[% searched | html %]">
+        <input type="submit" class="btn" value="[% loc('Go') %]">
+    </div>
+</form>
+[% END %]
+
+[% TRY %][% PROCESS 'admin/_index_extra_search.html' %][% CATCH file %][% END %]
+
+[% IF c.user.is_superuser %]
+<form method="get" action="[% c.uri_for('bodies') %]">
+    <label for="search_body">[% loc('Edit body details') %]</label>
+    <div class="form-txt-submit-box">
+        <select class="form-control" id="search_body" name="body">
+          [% FOREACH body IN bodies %]
+            [%- SET id = body.id %]
+            <option[% IF body.deleted %] class="adminhidden"[% END %] value="[% body.id %]">
+            [% body.name | html %]
+            [%- IF body.parent %], [% body.parent.name | html %][% END -%]
+            </option>
+          [% END %]
+        </select>
+        <input type="submit" class="btn" value="[% loc('Go') %]">
+    </div>
+</form>
+[% END %]
+
+</div>
+
+[%# Greece: the summary also lists the municipalities' reports waiting for approval, with check boxes to approve them
+    at once (App::Controller::GreeceApprove, which is also the full page /admin/greece/approve), and then the
+    reports waiting to be sent that do not wait for approval (2026-10-31). ~%]
+[% SET gr_waiting = [] %]
+[% SET gr_unsent = [] %]
+[% FOR p IN unsent_reports %]
+    [% IF c.cobrand.greece_needs_approval(p) %][% gr_waiting.push(p) %][% ELSE %][% gr_unsent.push(p) %][% END %]
+[% END %]
+[% IF c.req.params.approved.defined AND c.req.params.approved != '' %]<p class="fms-admin-info"><strong>Εγκρίθηκαν [% c.req.params.approved | html %] αναφορές.</strong></p>[% END %]
+[% IF c.user.is_superuser %]
+<h2 id="gr-approve">Αναφορές προς έγκριση ([% gr_waiting.size %])</h2>
+[% IF gr_waiting.size %]
+<p class="sm">Φεύγουν προς τους δήμους στις 09:00 και 14:00, αφού εγκριθούν. Τσέκαρε όσες είναι εντάξει και πάτα «Έγκριση επιλεγμένων».
+<a href="[% c.uri_for('/admin/greece/handbook') %]">Εγχειρίδιο</a></p>
+<form method="post" action="[% c.uri_for('/admin/greece/approve') %]" accept-charset="utf-8">
+    <input type="hidden" name="token" value="[% c.forward('/auth/get_csrf_token') %]">
+    <input type="hidden" name="back" value="summary">
+    <table cellspacing="0" cellpadding="4" border="1">
+        <tr><th><input type="checkbox" id="gr-ap-all" title="Όλες" checked></th><th>Αρ.</th><th>Κατηγορία / περιγραφή</th><th>Δήμος</th><th>Πότε</th></tr>
+        [% FOR r IN gr_waiting %]
+        <tr>
+            <td><input type="checkbox" name="id" value="[% r.id %]" id="gr-ap-[% r.id %]" class="gr-ap-box" checked></td>
+            <td><a href="[% c.uri_for('/admin/report_edit', r.id) %]">[% r.greece_ref | html %]</a></td>
+            <td><label for="gr-ap-[% r.id %]"><strong>[% r.title | html %]</strong>[% IF r.detail %]<br>[% r.detail | truncate(160) | html %][% END %]</label></td>
+            <td>[% r.body | html %]</td>
+            <td>[% r.greece_local_time | html %]</td>
+        </tr>
+        [% END %]
+    </table>
+    <p><button type="submit" class="btn btn--primary">Έγκριση επιλεγμένων</button></p>
+</form>
+<script nonce="[% csp_nonce %]">
+(function () {
+    var all = document.getElementById('gr-ap-all');
+    all.addEventListener('change', function () {
+        document.querySelectorAll('.gr-ap-box').forEach(function (b) { b.checked = all.checked; });
+    });
+})();
+</script>
+[% ELSE %]
+<p>Δεν υπάρχουν αναφορές που περιμένουν έγκριση.</p>
+[% END %]
+[% END %]
+
+[% IF gr_unsent.size %]
+<h2>[% loc('Reports waiting to be sent') %]</h2>
+
+<table cellspacing="0" cellpadding="2" border="1">
+    <tr>
+        <th>[% loc('ID') %]</th>
+        <th>[% loc('Title') %]</th>
+        <th>[% loc('Name') %]</th>
+        <th>[% loc('Body') %]</th>
+        <th>[% loc('State') %]</th>
+        <th>*</th>
+    </tr>
+    [% INCLUDE 'admin/problem_row.html' problems = gr_unsent %]
+</table>
+[% END %]
+
+[% INCLUDE 'admin/footer.html' %]

@@ -49,6 +49,7 @@ sub approve : Path('/admin/greece/approve') : Args(0) {
             $n++;
         }
         $c->log->info("greece approve: user " . $c->user->id . " approved $n report(s)");
+        return $c->res->redirect($c->uri_for('/admin', { approved => $n }) . '#gr-approve') if ($c->get_param('back') // '') eq 'summary';
         return $c->res->redirect($c->uri_for('/admin/greece/approve', { done => $n }));
     }
 
