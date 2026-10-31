@@ -713,6 +713,19 @@ sub greece_needs_approval {
     return @ids && !grep({ !$ok->{$_} } @ids) ? 1 : 0;
 }
 
+# The admin menu also lists this site's own pages (templates/web/greece/admin/navigation.html groups them).
+sub admin_pages {
+    my $self = shift;
+    my $pages = $self->SUPER::admin_pages(@_);
+    my $user = $self->{c} && $self->{c}->user;
+    if ($user && $user->is_superuser) {
+        $pages->{'greece/approve'} = [ 'Αναφορές προς έγκριση', 1 ];
+        $pages->{'greece/requests'} = [ 'Αιτήματα πολιτών', 2 ];
+        $pages->{'greece/handbook'} = [ 'Εγχειρίδιο διαχειριστή', 200 ];
+    }
+    return $pages;
+}
+
 # Whether search engines may list a report (2026-10-31): not a complaint to the Police, and not a municipality's
 # report that nobody has approved yet; those pages are «noindex» and left out of the sitemap.
 sub greece_report_indexable {

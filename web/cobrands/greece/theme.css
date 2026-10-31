@@ -1712,3 +1712,49 @@ body #front-recently .full-width { margin: 0 !important; }
 .gr-minimap__types button { padding: 0.25em 0.8em; border: 0; border-radius: var(--gr-pill); background: transparent; color: var(--gr-ink-2); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 .gr-minimap__types button.is-on { background: var(--gr-accent); color: #fff; }
 .gr-minimap__types button:focus-visible { outline: 2px solid var(--gr-accent); outline-offset: 1px; }
+
+/* The admin pages (/admin) in the look of the public pages: cards, soft tables, a grouped menu with «?» (2026-10-31). */
+body.admin { background: var(--gr-bg); color: var(--gr-ink); }
+body.admin .content, body.admin #main-content { color: var(--gr-ink); }
+body.admin h1 { margin: 0 0 .6em; font-size: 1.75rem; line-height: 1.2; letter-spacing: -0.01em; color: var(--gr-ink); }
+body.admin h2 { margin: 1.8em 0 .6em; font-size: 1.2rem; line-height: 1.3; color: var(--gr-accent-ink); }
+body.admin h2[data-gr-tip] .gr-help, body.admin h1[data-gr-tip] .gr-help { margin-left: .5em; }
+body.admin a { color: var(--gr-accent); }
+body.admin a:hover { color: var(--gr-accent-hover); }
+body.admin .sm { color: var(--gr-ink-3); }
+body.admin .gr-admin-intro { margin: 0 0 1.4em; padding: .9em 1.1em; background: var(--gr-accent-soft); border-radius: var(--gr-radius-s); color: var(--gr-accent-ink); line-height: 1.5; }
+body.admin .fms-admin-info, body.admin .gr-approve-done { margin: 0 0 1.2em; padding: .9em 1.1em; background: var(--gr-surface); border: 1px solid var(--gr-line); border-left: 4px solid var(--gr-accent); border-radius: var(--gr-radius-s); box-shadow: var(--gr-shadow-1); }
+
+/* The menu */
+body.admin .gr-adminnav { background: var(--gr-surface); border: 1px solid var(--gr-line); border-radius: var(--gr-radius); box-shadow: var(--gr-shadow-1); padding: .6em .5em .9em; }
+body.admin .gr-adminnav__title { margin: .9em .8em .3em; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gr-ink-3); }
+body.admin .gr-adminnav__title:first-child { margin-top: .4em; }
+body.admin .gr-adminnav ul { margin: 0; padding: 0; list-style: none; }
+body.admin .gr-adminnav li { display: flex; align-items: center; justify-content: space-between; gap: .4em; margin: 1px 0; padding-right: .5em; border-radius: var(--gr-radius-s); transition: background var(--gr-fast) var(--gr-ease); }
+body.admin .gr-adminnav li:hover { background: var(--gr-surface-2); }
+body.admin .gr-adminnav li > a { flex: 1; display: block; padding: .5em .8em; color: var(--gr-ink); text-decoration: none; font-weight: 500; border-radius: var(--gr-radius-s); }
+body.admin .gr-adminnav li.is-here { background: var(--gr-accent-soft); }
+body.admin .gr-adminnav li.is-here > a { color: var(--gr-accent-ink); font-weight: 700; box-shadow: inset 3px 0 0 var(--gr-accent); }
+body.admin .gr-adminnav li > a:focus-visible { outline: none; box-shadow: var(--gr-ring); }
+body.admin .gr-adminnav .gr-help { margin-left: 0; flex: none; }
+body.admin .gr-adminnav .gr-help__btn { width: 1.3em; height: 1.3em; font-size: .72rem; opacity: .75; }
+body.admin .gr-adminnav li:hover .gr-help__btn, body.admin .gr-adminnav .gr-help__btn:focus-visible, body.admin .gr-adminnav .gr-help__btn[aria-expanded="true"] { opacity: 1; }
+
+/* Tables */
+body.admin table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--gr-surface); border: 1px solid var(--gr-line); border-radius: var(--gr-radius-s); overflow: hidden; box-shadow: var(--gr-shadow-1); font-size: .92rem; }
+body.admin table[border] { border: 1px solid var(--gr-line); }
+body.admin th { padding: .6em .8em; text-align: left; background: var(--gr-surface-2); color: var(--gr-ink-2); font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border: 0; border-bottom: 1px solid var(--gr-line); }
+body.admin td { padding: .65em .8em; border: 0; border-bottom: 1px solid var(--gr-line); vertical-align: top; }
+body.admin tr:last-child td { border-bottom: 0; }
+body.admin tbody tr:hover td, body.admin table tr:hover > td { background: var(--gr-surface-2); }
+body.admin td small { color: var(--gr-ink-3); }
+
+/* Forms */
+body.admin input[type=text], body.admin input[type=email], body.admin input[type=search], body.admin input[type=number], body.admin input[type=password], body.admin input[type=date], body.admin select, body.admin textarea { padding: .5em .7em; border: 1px solid var(--gr-line-2); border-radius: var(--gr-radius-s); background: var(--gr-surface); color: var(--gr-ink); font: inherit; }
+body.admin input:focus, body.admin select:focus, body.admin textarea:focus { outline: none; border-color: var(--gr-accent); box-shadow: var(--gr-ring); }
+body.admin input[type=checkbox], body.admin input[type=radio] { accent-color: var(--gr-accent); width: 1.1em; height: 1.1em; }
+body.admin label { font-weight: 600; }
+body.admin dt { color: var(--gr-ink-2); }
+body.admin .admin-index-search { margin: 0 0 1.4em; padding: 1em 1.1em; background: var(--gr-surface); border: 1px solid var(--gr-line); border-radius: var(--gr-radius); box-shadow: var(--gr-shadow-1); }
+body.admin .adminhidden { color: var(--gr-ink-3); }
+body.admin .error { color: var(--gr-danger); }

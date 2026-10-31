@@ -61,6 +61,7 @@
 
     function labelFor(el) {
         if (el.matches && el.matches('label')) { return el; }
+        if (el.hasAttribute && el.hasAttribute('data-gr-tip')) { return el; }
         if (el.id) {
             var l = document.querySelector('label[for="' + el.id + '"]');
             if (l) { return l; }
@@ -111,6 +112,8 @@
 
     function scan() {
         if (!staffPage()) { return; }
+        // Any element with data-gr-tip="..." (the admin menu and headings) gets its «?» inside it.
+        document.querySelectorAll('[data-gr-tip]').forEach(function(el) { attach(el, el.getAttribute('data-gr-tip')); });
         HELP.forEach(function(h) {
             var el = document.querySelector(h[0]);
             if (el) { attach(el, t(h[1], h[2])); }

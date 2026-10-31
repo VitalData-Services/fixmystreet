@@ -66,7 +66,7 @@
 [% END %]
 [% IF c.req.params.approved.defined AND c.req.params.approved != '' %]<p class="fms-admin-info"><strong>Εγκρίθηκαν [% c.req.params.approved | html %] αναφορές.</strong></p>[% END %]
 [% IF c.user.is_superuser %]
-<h2 id="gr-approve">Αναφορές προς έγκριση ([% gr_waiting.size %])</h2>
+<h2 id="gr-approve" data-gr-tip="Οι αναφορές προς δήμους που δεν έχουν εγκριθεί ακόμα. Οι καταγγελίες προς την Αστυνομία δεν περιμένουν έγκριση. Μια αναφορά που δεν εγκρίνεις μένει δημόσια και περιμένει.">Αναφορές προς έγκριση ([% gr_waiting.size %])</h2>
 [% IF gr_waiting.size %]
 <p class="sm">Φεύγουν προς τους δήμους στις 09:00 και 14:00, αφού εγκριθούν. Τσέκαρε όσες είναι εντάξει και πάτα «Έγκριση επιλεγμένων».
 <a href="[% c.uri_for('/admin/greece/handbook') %]">Εγχειρίδιο</a></p>
@@ -101,7 +101,7 @@
 [% END %]
 
 [% IF gr_unsent.size %]
-<h2>[% loc('Reports waiting to be sent') %]</h2>
+<h2 data-gr-tip="Αναφορές που δεν χρειάζονται έγκριση (π.χ. καταγγελίες προς την Αστυνομία) και δεν έχουν σταλεί ακόμα. Αν μείνει εδώ πολλή ώρα, δες γιατί δεν στάλθηκε.">[% loc('Reports waiting to be sent') %]</h2>
 
 <table cellspacing="0" cellpadding="2" border="1">
     <tr>

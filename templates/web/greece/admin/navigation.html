@@ -1,0 +1,66 @@
+[%# The admin menu (replaces FixMyStreet's flat list): grouped, one line each, with a «?» that says what the page is for
+    (web/cobrands/greece/field-help.js, data-gr-tip). Pages not listed here still show, under «Άλλα». ~%]
+[% INCLUDE 'about/_sticky-button-content-navbar.html' %]
+[%
+    SET gr_groups = [
+        { title => 'Καθημερινά', items => [
+            [ 'summary', 'Η αρχική του διαχειριστή: οι αναφορές προς έγκριση και όσες περιμένουν να σταλούν.' ],
+            [ 'greece/approve', 'Οι αναφορές προς δήμους περιμένουν εδώ τον έλεγχό σου. Μόνο αφού τις εγκρίνεις φεύγουν, στις 09:00 και 14:00.' ],
+            [ 'reports', 'Αναζήτηση και επεξεργασία όλων των αναφορών: κατάσταση, κατηγορία, απόκρυψη, διόρθωση κειμένου.' ],
+            [ 'greece/requests', 'Αιτήματα πολιτών για τα δεδομένα τους (πρόσβαση, διαγραφή κ.λπ.), με τις προθεσμίες τους.' ],
+            [ 'flagged', 'Αναφορές και χρήστες που έχουν σημανθεί για έλεγχο.' ],
+        ] },
+        { title => 'Φορείς και χρήστες', items => [
+            [ 'bodies', 'Οι φορείς (δήμοι, Αστυνομία): ονόματα, email παραλήπτη και κατηγορίες που δέχονται.' ],
+            [ 'users', 'Λογαριασμοί πολιτών και προσωπικού: αναζήτηση, ρόλοι, αποκλεισμός.' ],
+            [ 'roles', 'Ομάδες δικαιωμάτων που δίνονται στο προσωπικό ενός φορέα.' ],
+            [ 'templates', 'Έτοιμες απαντήσεις που διαλέγει το προσωπικό όταν ενημερώνει μια αναφορά.' ],
+            [ 'responsepriorities', 'Οι προτεραιότητες που μπορεί να πάρει μια αναφορά (Υψηλή, Κανονική). Φαίνονται μόνο στο προσωπικό.' ],
+            [ 'states', 'Τα ονόματα των καταστάσεων μιας αναφοράς, όπως τα βλέπουν οι πολίτες.' ],
+            [ 'reportextrafields', 'Επιπλέον πεδία στη φόρμα αναφοράς ανά κατηγορία.' ],
+        ] },
+        { title => 'Στοιχεία και ρυθμίσεις', items => [
+            [ 'stats', 'Στατιστικά αναφορών για ένα διάστημα, ανά φορέα και κατηγορία.' ],
+            [ 'timeline', 'Χρονολόγιο: τι έγινε πρόσφατα στο site (νέες αναφορές, ενημερώσεις).' ],
+            [ 'sitemessage', 'Μήνυμα που εμφανίζεται πάνω σε όλο το site, π.χ. μια έκτακτη ανακοίνωση.' ],
+            [ 'manifesttheme', 'Όνομα και εικονίδια της εφαρμογής όταν προστίθεται στην αρχική οθόνη του κινητού.' ],
+            [ 'config', 'Πληροφορίες για την εγκατάσταση και τις ρυθμίσεις. Μόνο ανάγνωση.' ],
+            [ 'greece/handbook', 'Τι κάνεις και πότε: οδηγός βήμα προς βήμα για τον διαχειριστή.' ],
+        ] },
+    ];
+    SET gr_shown = {};
+%]
+<div class="sticky-sidebar gr-adminnav-wrap">
+    <aside>
+        <nav class="gr-adminnav" aria-label="Μενού διαχείρισης">
+        [% FOREACH g IN gr_groups %]
+            [% SET gr_any = 0 %]
+            [% FOREACH it IN g.items %][% IF allowed_pages.${it.0}.0 %][% SET gr_any = 1 %][% END %][% END %]
+            [% IF gr_any %]
+            <p class="gr-adminnav__title">[% g.title %]</p>
+            <ul>
+              [% FOREACH it IN g.items %]
+                [% SET link = it.0 %]
+                [% NEXT UNLESS allowed_pages.$link.0 %]
+                [% gr_shown.$link = 1 %]
+                [% SET here = (c.req.uri.path == '/admin/' _ link OR (link == 'summary' AND c.action == 'admin/index')) %]
+                <li data-gr-tip="[% it.1 | html %]"[% IF here %] class="is-here"[% END %]>
+                  <a href="[% c.uri_for( '/admin/' _ link ) %]"[% IF here %] aria-current="page"[% END %]>[% allowed_pages.$link.0 %]</a>
+                </li>
+              [% END %]
+            </ul>
+            [% END %]
+        [% END %]
+        [% SET gr_other = [] %]
+        [% FOREACH link IN allowed_links %][% gr_other.push(link) UNLESS gr_shown.$link %][% END %]
+        [% IF gr_other.size %]
+            <p class="gr-adminnav__title">Άλλα</p>
+            <ul>
+              [% FOREACH link IN gr_other %]
+                <li[% IF c.req.uri.path == '/admin/' _ link %] class="is-here"[% END %]><a href="[% c.uri_for( '/admin/' _ link ) %]">[% allowed_pages.$link.0 %]</a></li>
+              [% END %]
+            </ul>
+        [% END %]
+        </nav>
+    </aside>
+</div>
