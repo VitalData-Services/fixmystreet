@@ -48,13 +48,17 @@
     };
 
     // Draws the part of the image inside the crop (sx, sy, sw, sh in image pixels) with the marks on it.
+    // The result is at most 2800 px on the longer side: a 48 MP phone photo drawn at full size takes about 190 MB of memory,
+    // which low-memory phones do not have («low memory», 2026-10-31).
+    var MAX_SIDE = 2800;
     function render(img, crop, marks) {
+        var k = Math.min(1, MAX_SIDE / Math.max(crop.w, crop.h, 1));
         var c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(crop.w)); c.height = Math.max(1, Math.round(crop.h));
+        c.width = Math.max(1, Math.round(crop.w * k)); c.height = Math.max(1, Math.round(crop.h * k));
         var g = c.getContext('2d');
         g.drawImage(img, crop.x, crop.y, crop.w, crop.h, 0, 0, c.width, c.height);
         marks.forEach(function(m) {
-            var x = Math.round(m.x - crop.x), y = Math.round(m.y - crop.y), w = Math.round(m.w), h = Math.round(m.h);
+            var x = Math.round((m.x - crop.x) * k), y = Math.round((m.y - crop.y) * k), w = Math.round(m.w * k), h = Math.round(m.h * k);
             var x0 = Math.max(0, x), y0 = Math.max(0, y), x1 = Math.min(c.width, x + w), y1 = Math.min(c.height, y + h);
             if (x1 - x0 < 2 || y1 - y0 < 2) { return; }
             if (m.kind === 'black') {
@@ -95,6 +99,7 @@
                 if (finished) { return; }
                 finished = true;
                 URL.revokeObjectURL(url);
+                img.removeAttribute('src');   // lets the browser free the decoded photo
                 if (d.open) { d.close(); }
                 d.parentNode && d.parentNode.removeChild(d);
                 resolve(blob);
@@ -213,7 +218,7 @@
             function send(whole) {
                 var c = result(whole);
                 if (!c) { finish(null); return; }
-                c.toBlob(function(blob) { finish(blob); }, 'image/jpeg', 0.92);
+                c.toBlob(function(blob) { c.width = c.height = 0; finish(blob); }, 'image/jpeg', 0.92);
             }
             d.querySelector('.gr-crop__whole').addEventListener('click', function() { send(true); });
             d.addEventListener('cancel', function(e) { e.preventDefault(); finish(null); });

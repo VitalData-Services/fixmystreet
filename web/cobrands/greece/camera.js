@@ -146,6 +146,7 @@
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         shutter.disabled = true;
         canvas.toBlob(function(blob) {
+            canvas.width = canvas.height = 0;   // free the frame
             if (blob && currentDz) { currentDz.addFile(photoFile(blob)); }
             closeDialog();
         }, 'image/jpeg', 0.92);
