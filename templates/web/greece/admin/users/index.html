@@ -1,5 +1,6 @@
 [%# FixMyStreet's Users page, with a pager under the table: the list is every user, 20 to a page (Greece.pm users_staff_admin). ~%]
 [% INCLUDE 'admin/header.html' title=loc('Search Users') %]
+[% SET csrf_token = c.forward('/auth/get_csrf_token') %]
 [% PROCESS 'admin/report_blocks.html' %]
 
 [% BLOCK role_select %]
@@ -16,6 +17,27 @@
 [% END %]
 
 [% INCLUDE status_message %]
+
+[%# Greece (2026-10-31): the result of the last bulk action, the status filter, counts; the bulk buttons are above the table. ~%]
+[% IF c.req.params.gr_done.defined %]
+<p class="gr-approve-done"><strong>
+  [% SET gr_what = { disable => 'απενεργοποιήθηκαν', enable => 'ενεργοποιήθηκαν', delete => 'διαγράφηκαν' } %]
+  [% SET gr_act = c.req.params.gr_done %]
+  [% c.req.params.gr_n | html %] χρήστες [% gr_what.$gr_act %].
+  [% IF c.req.params.gr_skipped > 0 %]Παραλείφθηκαν [% c.req.params.gr_skipped | html %] (ο ίδιος ο λογαριασμός σου, διαχειριστές, προσωπικό που δεν διαγράφεται, χρήστες χωρίς επαληθευμένο email ή τηλέφωνο, ή ήδη διαγραμμένοι).[% END %]
+</strong></p>
+[% END %]
+[% SET gr_counts = c.cobrand.greece_user_counts %]
+[% SET gr_stname = { active => 'Ενεργός', disabled => 'Απενεργοποιημένος', deleted => 'Διαγραμμένος', staff => 'Προσωπικό' } %]
+[% SET gr_cur = c.req.params.status %]
+<nav class="gr-statusbar" aria-label="Κατάσταση χρηστών">
+    <span class="gr-statusbar__label" data-gr-tip="Φιλτράρει τη λίστα ανά κατάσταση. Ενεργός: κανονικός λογαριασμός. Απενεργοποιημένος: δεν μπορεί να κάνει αναφορές. Διαγραμμένος: τα στοιχεία του έχουν σβηστεί. Προσωπικό: υπάλληλοι φορέων και διαχειριστές.">Κατάσταση</span>
+    <a href="[% c.uri_for('/admin/users') %]"[% IF NOT gr_cur %] class="is-on" aria-current="true"[% END %]>Όλοι</a>
+    <a href="[% c.uri_for('/admin/users', { status => 'active' }) %]"[% IF gr_cur == 'active' %] class="is-on" aria-current="true"[% END %]>Ενεργοί <b>[% gr_counts.active %]</b></a>
+    <a href="[% c.uri_for('/admin/users', { status => 'disabled' }) %]"[% IF gr_cur == 'disabled' %] class="is-on" aria-current="true"[% END %]>Απενεργοποιημένοι <b>[% gr_counts.disabled %]</b></a>
+    <a href="[% c.uri_for('/admin/users', { status => 'deleted' }) %]"[% IF gr_cur == 'deleted' %] class="is-on" aria-current="true"[% END %]>Διαγραμμένοι <b>[% gr_counts.deleted %]</b></a>
+    <a href="[% c.uri_for('/admin/users', { status => 'staff' }) %]"[% IF gr_cur == 'staff' %] class="is-on" aria-current="true"[% END %]>Προσωπικό <b>[% gr_counts.staff %]</b></a>
+</nav>
 
 <div class="fms-admin-info">
     [% loc("User search finds matches in users' names and email addresses.") %]
@@ -37,11 +59,22 @@
 
 [% IF users.size %]
 
-<form method="post">
+<form method="post" id="gr-users-form">
+<input type="hidden" name="token" value="[% csrf_token %]">
+<input type="hidden" name="status" value="[% gr_cur | html %]">
+[% IF c.user.is_superuser %]
+<div class="gr-bulk">
+    <span class="gr-bulk__label">Με τους επιλεγμένους:</span>
+    <span class="gr-bulk__item" data-gr-tip="Ο χρήστης δεν μπορεί πια να κάνει αναφορές και αποσυνδέεται παντού. Τα στοιχεία και οι αναφορές του μένουν. Αναιρείται με «Ενεργοποίηση». Χρειάζεται επαληθευμένο email ή τηλέφωνο."><button type="submit" class="btn" formaction="[% c.uri_for('/admin/greece/users-action') %]" name="act" value="disable" data-confirm="Απενεργοποίηση των επιλεγμένων χρηστών;">Απενεργοποίηση</button></span>
+    <span class="gr-bulk__item" data-gr-tip="Ο χρήστης ξαναμπορεί να κάνει αναφορές (βγαίνει από τη λίστα αποκλεισμένων)."><button type="submit" class="btn" formaction="[% c.uri_for('/admin/greece/users-action') %]" name="act" value="enable">Ενεργοποίηση</button></span>
+    <span class="gr-bulk__item" data-gr-tip="Σβήνει τα προσωπικά στοιχεία του χρήστη (όνομα, email, τηλέφωνο, κωδικό). Οι αναφορές του μένουν, ανώνυμες. ΔΕΝ αναιρείται. Δεν ισχύει για προσωπικό, διαχειριστές και τον λογαριασμό σου."><button type="submit" class="btn gr-bulk__danger" formaction="[% c.uri_for('/admin/greece/users-action') %]" name="act" value="delete" data-confirm="ΜΟΝΙΜΗ διαγραφή των προσωπικών στοιχείων των επιλεγμένων χρηστών. Δεν αναιρείται. Συνέχεια;">Διαγραφή</button></span>
+</div>
+[% END %]
 <table cellspacing="0" cellpadding="2" border="1">
     <tr>
-        <th>*</th>
+        <th><input type="checkbox" id="gr-users-all" title="Όλοι"></th>
         <th>[% loc('Name') %]</th>
+        <th>Κατάσταση</th>
         <th>[% loc('Email') %]</th>
         <th>[% loc('Body') %]</th>
       [% IF c.cobrand.moniker != 'zurich' AND (searched OR role_selected) %]
@@ -51,13 +84,12 @@
     </tr>
 [%- FOREACH user IN users %]
     <tr>
-        <td align="center">[% IF user.from_body %]
-            <input type="checkbox" name="uid" value="[% user.id %]" id="uid[% user.id %]">
-            [% END %]</td>
-        <td>[% IF user.from_body %]<label class="inline" for="uid[% user.id %]">[% END %]
+        <td align="center"><input type="checkbox" name="uid" value="[% user.id %]" id="uid[% user.id %]" class="gr-users-box"></td>
+        <td><label class="inline" for="uid[% user.id %]">
             [% PROCESS value_or_nbsp value=user.name %]
-            [% IF user.from_body %]</label>[% END %]
-        </td>
+        </label></td>
+        [% SET gr_st = c.cobrand.greece_user_status(user) %]
+        <td><span class="gr-ust gr-ust--[% gr_st %]">[% gr_stname.$gr_st %]</span></td>
         <td><a href="[% c.uri_for_action( 'admin/reports/index', search => user.email ) %]">[% PROCESS value_or_nbsp value=user.email %]</a></td>
         <td>[% PROCESS value_or_nbsp value=user.from_body.name %]
             [% IF user.is_superuser %] * [% END %]
@@ -96,6 +128,20 @@
 </p>
 <p><input class="btn" type="submit" value="[% loc('Save changes') %]">
 </form>
+<script nonce="[% csp_nonce %]">
+(function () {
+    var all = document.getElementById('gr-users-all');
+    if (all) { all.addEventListener('change', function () {
+        document.querySelectorAll('.gr-users-box').forEach(function (b) { b.checked = all.checked; });
+    }); }
+    document.querySelectorAll('#gr-users-form button[data-confirm]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            if (!document.querySelector('.gr-users-box:checked')) { e.preventDefault(); return; }
+            if (!window.confirm(btn.getAttribute('data-confirm'))) { e.preventDefault(); }
+        });
+    });
+})();
+</script>
 
 [% ELSIF searched || role_selected %]
 

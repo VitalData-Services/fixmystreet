@@ -60,6 +60,60 @@ sub approve : Path('/admin/greece/approve') : Args(0) {
     $c->stash->{template} = 'admin/greece_approve.html';
 }
 
+=head2 users_action
+
+  POST /admin/greece/users-action  act=disable|enable|delete & uid=...  (from the Users page)
+
+Disable puts the user's verified email/phone in the abuse list (they cannot make reports) and signs them out
+everywhere; enable takes them out of it; delete removes the personal details (FixMyStreet's «remove account»: reports
+stay, anonymous) and cannot be undone. Never on yourself, on a superuser or, for delete, on staff. Superusers only.
+
+=cut
+
+sub users_action : Path('/admin/greece/users-action') : Args(0) {
+    my ( $self, $c ) = @_;
+    $c->detach('/page_error_404_not_found', []) unless $c->cobrand->moniker eq 'greece';
+    return $c->res->redirect('/auth?r=/admin/users') unless $c->user_exists;
+    $c->detach('/page_error_403_access_denied', ['']) unless $c->user->is_superuser;
+    return $c->res->redirect($c->uri_for('/admin/users')) unless $c->req->method eq 'POST';
+    $c->forward('/auth/check_csrf_token');
+
+    my $act = $c->get_param('act') // '';
+    return $c->res->redirect($c->uri_for('/admin/users')) unless $act =~ /^(disable|enable|delete)$/;
+    my @ids = grep { /^\d+$/ } $c->get_param_list('uid');
+    my @users = @ids ? $c->model('DB::User')->search({ id => \@ids })->all : ();
+    my ($n, $skipped) = (0, 0);
+    for my $u (@users) {
+        my $status = $c->cobrand->greece_user_status($u);
+        if ($u->id == $c->user->id || $u->is_superuser
+            || ($act eq 'delete' && ($u->from_body || $status eq 'deleted'))
+            || ($act ne 'delete' && $status eq 'deleted')) {
+            $skipped++;
+            next;
+        }
+        my @names;
+        push @names, $u->email if $u->email_verified && $u->email;
+        push @names, $u->phone if $u->phone_verified && $u->phone;
+        if ($act eq 'disable') {
+            unless (@names) { $skipped++; next; }
+            $c->model('DB::Abuse')->find_or_create({ email => $_ }) for @names;
+            $c->forward('/admin/users/user_logout_everywhere', [ $u ]);
+        } elsif ($act eq 'enable') {
+            $c->model('DB::Abuse')->search({ email => \@names })->delete if @names;
+        } else {
+            $c->forward('/admin/users/user_logout_everywhere', [ $u ]);
+            $u->anonymize_account;
+        }
+        $c->forward('/admin/log_edit', [ $u->id, 'user', 'edit' ]);
+        $n++;
+    }
+    $c->log->info("greece users: user " . $c->user->id . " $act $n user(s), skipped $skipped");
+    my %q = ( gr_done => $act, gr_n => $n, gr_skipped => $skipped );
+    my $status = $c->get_param('status');
+    $q{status} = $status if $status && $status =~ /^(active|disabled|deleted|staff)$/;
+    return $c->res->redirect($c->uri_for('/admin/users', \%q));
+}
+
 __PACKAGE__->meta->make_immutable;
 
 1;

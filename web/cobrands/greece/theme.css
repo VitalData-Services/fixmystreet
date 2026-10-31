@@ -1761,3 +1761,23 @@ body.admin .error { color: var(--gr-danger); }
 
 /* The admin menu column: no coloured band behind the card (the base sticky sidebar paints one). */
 body.admin .sticky-sidebar, body.admin .sticky-sidebar aside { background: transparent !important; box-shadow: none; border: 0; }
+
+/* Admin Users page: status filter, bulk buttons, status badge (2026-10-31). */
+.gr-statusbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 1.2em; }
+.gr-statusbar__label { margin-right: .4em; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gr-ink-3); }
+.gr-statusbar a { display: inline-flex; align-items: center; gap: .4em; padding: .35em .9em; border: 1px solid var(--gr-line-2); border-radius: var(--gr-pill); background: var(--gr-surface); color: var(--gr-ink); text-decoration: none; font-weight: 600; font-size: .9rem; }
+.gr-statusbar a:hover { border-color: var(--gr-accent); color: var(--gr-accent); }
+.gr-statusbar a.is-on { background: var(--gr-accent); border-color: var(--gr-accent); color: #fff; }
+.gr-statusbar a b { padding: 0 .45em; border-radius: var(--gr-pill); background: var(--gr-accent-soft); color: var(--gr-accent-ink); font-size: .78rem; }
+.gr-statusbar a.is-on b { background: rgba(255, 255, 255, .25); color: #fff; }
+.gr-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 1em; padding: .7em 1em; background: var(--gr-surface); border: 1px solid var(--gr-line); border-radius: var(--gr-radius-s); box-shadow: var(--gr-shadow-1); }
+.gr-bulk__label { font-weight: 700; color: var(--gr-ink-2); }
+.gr-bulk__item { display: inline-flex; align-items: center; }
+.gr-bulk .btn { margin: 0; }
+.gr-bulk .gr-bulk__danger { background: var(--gr-danger); color: #fff; }
+.gr-bulk .gr-bulk__danger:hover { background: #b91c1c; }
+.gr-ust { display: inline-block; padding: .15em .7em; border-radius: var(--gr-pill); font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.gr-ust--active { background: var(--gr-fixed-soft); color: var(--gr-fixed-ink); }
+.gr-ust--disabled { background: #fff1d6; color: #7a4a00; }
+.gr-ust--deleted { background: #e8ecf2; color: var(--gr-ink-3); }
+.gr-ust--staff { background: var(--gr-accent-soft); color: var(--gr-accent-ink); }

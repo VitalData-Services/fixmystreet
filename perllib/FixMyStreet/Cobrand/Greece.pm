@@ -685,6 +685,38 @@ sub greece_digest_next {
     return $self->greece_t('αύριο', 'tomorrow') . ' 09:00';
 }
 
+# The status of a user, for the admin's Users page (2026-10-31): «staff» (staff or superuser), «deleted» (the personal
+# details were removed: anonymize_account), «disabled» (in the abuse list: cannot make reports), else «active».
+sub greece_abuse_emails {
+    my $self = shift;
+    return $self->{greece_abuse_emails} //= { map { lc($_->email) => 1 } FixMyStreet::DB->resultset('Abuse')->all };
+}
+sub greece_user_status {
+    my ($self, $user) = @_;
+    return 'staff' if $user->is_superuser || $user->from_body;
+    return 'deleted' if ($user->email // '') =~ /^removed-\d+\@/;
+    my $abuse = $self->greece_abuse_emails;
+    return 'disabled' if ($user->email && $abuse->{lc $user->email}) || ($user->phone && $abuse->{lc $user->phone});
+    return 'active';
+}
+sub greece_users_where {
+    my ($self, $status) = @_;
+    my @abuse = keys %{ $self->greece_abuse_emails };
+    my $staff = { -or => [ 'me.is_superuser' => 1, 'me.from_body' => { '!=' => undef } ] };
+    my $deleted = { 'me.email' => { -like => 'removed-%' } };
+    my $disabled = { -or => [ 'me.email' => { -in => \@abuse }, 'me.phone' => { -in => \@abuse } ] };
+    return $staff if $status eq 'staff';
+    return $deleted if $status eq 'deleted';
+    return { -and => [ $disabled, { -not => $staff }, { -not => $deleted } ] } if $status eq 'disabled';
+    return { -and => [ { -not => $staff }, { -not => $deleted }, { -not => $disabled } ] } if $status eq 'active';
+    return {};
+}
+sub greece_user_counts {
+    my $self = shift;
+    my $rs = FixMyStreet::DB->resultset('User');
+    return { map { $_ => $rs->search($self->greece_users_where($_))->count } qw(active disabled deleted staff) };
+}
+
 # The admin's Users page lists every user, 20 to a page (?p=N), until a search narrows it (FixMyStreet
 # lists only the staff and admins by default). The pager is for templates/web/greece/admin/users/index.html.
 sub users_staff_admin {
@@ -692,7 +724,10 @@ sub users_staff_admin {
     my $c = $self->{c};
     my $page = $c ? ($c->get_param('p') // 1) : 1;
     $page = 1 unless $page =~ /^\d+$/ && $page > 0;
-    my $rs = FixMyStreet::DB->resultset('User')->search(undef, { rows => 20, page => $page });
+    my $rs = FixMyStreet::DB->resultset('User');
+    my $status = $c ? ($c->get_param('status') // '') : '';
+    $rs = $rs->search($self->greece_users_where($status)) if $status;
+    $rs = $rs->search(undef, { rows => 20, page => $page });
     $c->stash->{gr_users_pager} = $rs->pager if $c;
     return $rs;
 }
