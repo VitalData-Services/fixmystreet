@@ -685,7 +685,8 @@ sub greece_digest_next {
     return $self->greece_t('αύριο', 'tomorrow') . ' 09:00';
 }
 
-# The status of a user, for the admin's Users page (2026-10-31): «staff» (staff or superuser), «deleted» (the personal
+# The status of a user, for the admin's Users page (2026-10-31): «protected» (the anonymous account, which no action touches),
+# «staff» (staff or superuser), «deleted» (the personal
 # details were removed: anonymize_account), «disabled» (in the abuse list: cannot make reports), else «active».
 sub greece_abuse_emails {
     my $self = shift;
@@ -693,6 +694,8 @@ sub greece_abuse_emails {
 }
 sub greece_user_status {
     my ($self, $user) = @_;
+    my $anon = $self->anonymous_account;
+    return 'protected' if $anon && lc($user->email // '') eq lc($anon->{email});
     return 'staff' if $user->is_superuser || $user->from_body;
     return 'deleted' if ($user->email // '') =~ /^removed-\d+\@/;
     my $abuse = $self->greece_abuse_emails;
@@ -702,7 +705,8 @@ sub greece_user_status {
 sub greece_users_where {
     my ($self, $status) = @_;
     my @abuse = keys %{ $self->greece_abuse_emails };
-    my $staff = { -or => [ 'me.is_superuser' => 1, 'me.from_body' => { '!=' => undef } ] };
+    my $anon = $self->anonymous_account;
+    my $staff = { -or => [ 'me.is_superuser' => 1, 'me.from_body' => { '!=' => undef }, ($anon ? ('me.email' => $anon->{email}) : ()) ] };
     my $deleted = { 'me.email' => { -like => 'removed-%' } };
     my $disabled = { -or => [ 'me.email' => { -in => \@abuse }, 'me.phone' => { -in => \@abuse } ] };
     return $staff if $status eq 'staff';
