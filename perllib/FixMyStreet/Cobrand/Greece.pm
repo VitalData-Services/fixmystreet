@@ -1510,22 +1510,18 @@ sub greece_recipients {
 }
 
 
-# The street number of the spot, for the police text: { number }. Found automatically first: the one the map
-# gives (Nominatim), else the one Apple Maps gives for the spot where an Apple Maps key is set (APPLE_MAPS_*
-# in the configuration); only if neither has one, the one the reporter wrote (question "arithmos"). Empty
-# hash if none.
+# The street number of the spot, for the police text: { number, street }. Apple Maps is the source for the street
+# and number (owner, 2026-11-01; needs APPLE_MAPS_* in the configuration): the address it gives for the spot, else
+# the one the reporter wrote (question "arithmos"), else the closest number nearby. Empty hash if none.
 sub greece_street_number {
     my ($self, $address) = @_;
-    my $parts = $address ? $address->parts : {};
-    return { number => $parts->{number} } if $parts->{number};
-    if (my $street = $parts->{street}) {
-        my $number = __PACKAGE__->greece_apple_number($self->latitude, $self->longitude, $street);
-        return { number => $number } if $number;
-    }
+    my $ap = __PACKAGE__->greece_apple_address($self->latitude, $self->longitude);
+    return { number => $ap->{number}, street => $ap->{street} } if $ap && $ap->{number} && $ap->{street};
     my $given = $self->get_extra_field_value('arithmos') // '';
     $given =~ s/^\s+|\s+$//g;
     $given =~ s/^(?:αρ(?:ιθμ[οό]ς)?|no|n)\.?\s*//i;
-    return { number => $given } if $given =~ /^\d{1,4}(?:\s*[-\/]\s*\d{1,4})?\s*[A-Za-zΑ-Ωα-ω]?$/;
+    return { number => $given, ($ap && $ap->{street} ? (street => $ap->{street}) : ()) }
+        if $given =~ /^\d{1,4}(?:\s*[-\/]\s*\d{1,4})?\s*[A-Za-zΑ-Ωα-ω]?$/;
     # Last, the closest number in the street (kept from when the report was made, else looked for now), written
     # as «κοντά στον αρ. N»; its street is the one Apple names, the number belongs to that one.
     my $near = $self->get_extra_metadata('greece_near');
@@ -1536,16 +1532,17 @@ sub greece_street_number {
 
 # The street and number to write for the spot: { street, number }. For an entrance or double parking the
 # building at the spot is what counts, so there the address Apple Maps gives (street and number) is used when
-# it has one; otherwise the street the map gives, with the number from greece_street_number.
+# it has one; otherwise the street Apple gives for the spot (the map's street only when Apple gives none), with the
+# number from greece_street_number.
 sub greece_street_parts {
     my ($self, $address) = @_;
     my $parts = $address ? $address->parts : {};
+    my $ap = __PACKAGE__->greece_apple_address($self->latitude, $self->longitude);
     if (($self->get_extra_field_value('paravasi') // '') =~ /^(?:eisodos|diplo)$/) {
-        my $ap = __PACKAGE__->greece_apple_address($self->latitude, $self->longitude);
         return { street => $ap->{street}, number => $ap->{number} } if $ap && $ap->{street} && $ap->{number};
     }
     my $found = $self->greece_street_number($address);
-    return { street => $found->{street} || $parts->{street}, number => $found->{number} };
+    return { street => $found->{street} || ($ap && $ap->{street}) || $parts->{street}, number => $found->{number} };
 }
 
 # Apple Maps Server API (https://developer.apple.com/documentation/applemapsserverapi): the house number
@@ -1567,14 +1564,6 @@ sub greece_apple_address {
     warn "Apple Maps lookup failed: $@" if $@;
     $APPLE_SEEN{$key} = [ time + 60, $address ] if defined $address;   # a failure is tried again
     return $address;
-}
-# The number Apple gives for the point, when its street is the given one (else nothing).
-sub greece_apple_number {
-    my ($class, $lat, $lon, $street) = @_;
-    my $a = $class->greece_apple_address($lat, $lon) or return '';
-    my ($have, $want) = (_greece_plain_street($a->{street}), _greece_plain_street($street));
-    return '' unless length $have && length $want && (index($want, $have) >= 0 || index($have, $want) >= 0);
-    return $a->{number} // '';
 }
 # A street name without accents, spaces, punctuation or a leading «οδός»/«λεωφόρος», for comparing two spellings.
 sub _greece_plain_street {
