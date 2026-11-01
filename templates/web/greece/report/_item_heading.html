@@ -1,0 +1,20 @@
+[%# The title of a report in a list. On the front page (gr_front_recent) the emoji of its category comes first,
+    the same ones as on the report form (web/cobrands/greece/category-emoji.js); 📍 for a category not listed. ~%]
+[%
+gr_emoji = {
+    'Λακκούβα ή φθορά οδοστρώματος' => '🕳️',
+    'Πρόβλημα με πεζοδρόμιο' => '🚶',
+    'Φθαρμένο πεζοδρόμιο ή ράμπα ΑμεΑ' => '♿',
+    'Στάθμευση σε ράμπα ή θέση ΑμεΑ, πεζοδρόμιο ή διάβαση' => '♿',
+    'Στάθμευση σε θέση ΑμεΑ ή φορτιστή EV' => '♿',
+    'Στάθμευση σε φορτιστή EV ή εμπόδιο στη διέλευση' => '🔌',
+    'Φρεάτια και καθαριότητα' => '🗑️',
+    'Πράσινο και δέντρα' => '🌳',
+    'Οδοφωτισμός' => '💡',
+    'Άλλο' => '📝',
+};
+%]
+<h3 class="item-list__heading">
+    [%- IF gr_front_recent %]<span class="gr-cat-emoji" aria-hidden="true">[% gr_emoji.item(problem.category) || '📍' %]</span>[% END -%]
+    [%- problem.greece_title(c.stash.lang_code == 'en-gb') | html -%]
+</h3>
