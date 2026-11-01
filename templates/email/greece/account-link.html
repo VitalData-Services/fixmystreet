@@ -1,0 +1,72 @@
+[%# HTML part of the email after a report made without signing in: the report's number and where it goes, then
+    the personal link to an account. Same words as account-link.txt (Greek, English or both, _lang.txt). Styles
+    local, colours as on fixmystreets.gr. ~%]
+[% PROCESS '_lang.txt' ~%]
+[%
+bodyname = report.body.replace('&#39;', "'");
+held = report.state == 'hidden';
+plural = report.bodies_str.match(',');
+email_summary = "Η αναφορά σου " _ report.greece_ref _ " καταχωρήθηκε. / Your report " _ report.greece_ref _ " has been logged.";
+IF L == 'en';
+    email_footer = 'This email was sent automatically from an unmonitored account. Please do not reply to it.';
+ELSIF L == 'both';
+    email_footer = 'Αυτό το email στάλθηκε αυτόματα· μην απαντήσεις σε αυτό. / This email was sent automatically; please do not reply to it.';
+END;
+email_columns = 1;
+PROCESS '_email_settings.html';
+INCLUDE '_email_top.html';
+%]
+[% BLOCK part %]
+  [%# lg is 'el' or 'en'. ~%]
+  <p style="margin: 0 0 6px 0; font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.04em; color: #1f5fd6;">[% lg == 'el' ? 'ΚΑΤΑΧΩΡΗΘΗΚΕ' : 'LOGGED' %]</p>
+  <h1 style="[% h1_style %]">[% (lg == 'el' ? 'Η αναφορά σου καταχωρήθηκε' : 'Your report has been logged') | html %]</h1>
+  <p style="[% p_style %]">[% lg == 'el' ? 'Γεια σου,' : 'Hello,' %] [% lg == 'el' ? 'η αναφορά σου' : 'your report' %] <strong>«[% report.title | html %]»</strong> [% lg == 'el' ? 'καταχωρήθηκε.' : 'has been logged.' %]</p>
+
+  <table [% table_reset | safe %] width="100%" style="margin: 4px 0 20px 0; border: 1px solid #dbe4f5; border-radius: 10px; border-collapse: separate; background-color: #f2f6fd;">
+    <tr>
+      <td style="padding: 14px 16px; text-align: left; font-size: 13px; line-height: 18px; font-weight: 600; color: #475569;">[% lg == 'el' ? 'Αριθμός αναφοράς' : 'Report number' %]<br>
+        <span style="font-size: 26px; line-height: 34px; font-weight: 800; letter-spacing: 0.02em; color: #0f172a; font-family: monospace;">[% report.greece_ref | html %]</span></td>
+    </tr>
+    <tr>
+      <td style="padding: 12px 16px; border-top: 1px solid #dbe4f5; text-align: left; font-size: 15px; line-height: 22px; color: #0f172a;">
+        [%~ IF held %]
+          [% lg == 'el' ? 'Θα ελεγχθεί πρώτα από τους διαχειριστές και μετά θα σταλεί.' : 'It will be checked by the moderators first and then sent.' %]
+        [%~ ELSIF report.bodies_str %]
+          <span style="font-size: 13px; line-height: 18px; font-weight: 600; color: #475569;">
+            [%~ IF lg == 'el' %][% plural ? 'Θα σταλεί στις αρμόδιες υπηρεσίες' : 'Θα σταλεί στην αρμόδια υπηρεσία' %][% ELSE %]Will be sent to[% END %]</span><br>
+          <strong>[% (lg == 'el' ? bodyname.replace(' and ', ' και ') : bodyname) | html %]</strong>
+        [%~ ELSE %]
+          [% lg == 'el' ? 'Η αναφορά σου έχει καταχωρηθεί.' : 'Your report has been recorded.' %]
+        [%~ END %]
+      </td>
+    </tr>
+  </table>
+
+  [% IF report_url %]
+  <p style="margin: 0 0 8px 0; text-align: center;"><a style="[% button_style %]" href="[% report_url %]">[% lg == 'el' ? 'Δες την αναφορά' : 'See your report' %]</a></p>
+  [% END %]
+
+  <hr style="border: 0; border-top: 1px solid #d9dee8; margin: 26px 0 22px 0;">
+  <h2 style="margin: 0 0 8px 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #0f172a;">
+    [%~ IF account_exists %][% lg == 'el' ? 'Σύνδεση στον λογαριασμό σου' : 'Sign in to your account' %]
+    [%~ ELSE %][% lg == 'el' ? 'Θες λογαριασμό;' : 'Would you like an account?' %][% END %]</h2>
+  <p style="[% p_style %]">
+    [%~ IF account_exists %]
+      [% lg == 'el' ? 'Για να συνδεθείς στον λογαριασμό σου και να παρακολουθείς τις αναφορές σου, πάτησε το κουμπί.' : 'To sign in to your account and follow your reports, click the button.' %]
+    [%~ ELSE %]
+      [% lg == 'el' ? 'Για να παρακολουθείς τις αναφορές σου και να κάνεις τις επόμενες πιο γρήγορα, πάτησε τον προσωπικό σου σύνδεσμο και διάλεξε κωδικό.' : 'To follow your reports and make the next ones faster, click your personal link and choose a password.' %]
+    [%~ END %]</p>
+  <p style="margin: 0 0 14px 0; text-align: center;"><a style="[% button_style %]" href="[% token_url %]">
+    [%~ IF account_exists %][% lg == 'el' ? 'Σύνδεση' : 'Sign in' %][% ELSE %][% lg == 'el' ? 'Δημιουργία λογαριασμού' : 'Create account' %][% END %]</a></p>
+  <p style="[% secondary_p_style %]">[% lg == 'el' ? 'Ο σύνδεσμος είναι μόνο για σένα και ισχύει 24 ώρες. Αν δεν έκανες εσύ αυτή την αναφορά, αγνόησε αυτό το μήνυμα.' : 'The link is for you only and works for 24 hours. If you did not make this report, ignore this email.' %]</p>
+  <p style="[% secondary_p_style %]">[% lg == 'el' ? 'Αν το κουμπί δεν δουλεύει, αντίγραψε τον σύνδεσμο στον browser:' : 'If the button does not work, copy this link into your browser:' %]<br>
+    <a href="[% token_url %]" style="word-break: break-all;">[% token_url %]</a></p>
+[% END %]
+<th style="[% td_style %][% only_column_style %]">
+  [% start_padded_box | safe %]
+  [% IF L != 'en' %][% INCLUDE part lg = 'el' %][% END %]
+  [% IF L == 'both' %]<hr style="border: 0; border-top: 2px solid #d9dee8; margin: 30px 0;">[% END %]
+  [% IF L != 'el' %][% INCLUDE part lg = 'en' %][% END %]
+  [% end_padded_box | safe %]
+</th>
+[% INCLUDE '_email_bottom.html' %]
