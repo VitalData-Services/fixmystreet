@@ -1,0 +1,107 @@
+[%# Visitors and reports at a glance (App::Controller::GreeceAnalytics). Bars are plain CSS, no script, nothing loaded from elsewhere. ~%]
+[% INCLUDE 'admin/header.html' title = 'Επισκέπτες και στατιστικά' %]
+[%
+    SET gr_state_names = {
+        'confirmed' => 'Ανοιχτή', 'investigating' => 'Εξετάζεται', 'in progress' => 'Σε εξέλιξη', 'planned' => 'Προγραμματισμένη',
+        'action scheduled' => 'Προγραμματισμένη ενέργεια', 'fixed - council' => 'Λύθηκε', 'fixed - user' => 'Λύθηκε (από πολίτη)',
+        'fixed' => 'Λύθηκε', 'closed' => 'Έκλεισε', 'unable to fix' => 'Δεν μπορεί να λυθεί', 'not responsible' => 'Άλλος φορέας',
+        'duplicate' => 'Διπλότυπη', 'unconfirmed' => 'Μη επιβεβαιωμένη', 'partial' => 'Ημιτελής', 'wish' => 'Πρόταση',
+    };
+%]
+<style>
+.gr-an-cards { display: flex; flex-wrap: wrap; gap: .75em; margin: 1em 0; }
+.gr-an-card { flex: 1 1 9em; border: 1px solid #ccd; border-radius: .4em; padding: .6em .8em; background: #fff; }
+.gr-an-card b { display: block; font-size: 1.7em; line-height: 1.2; }
+.gr-an-card span { font-size: .85em; color: #555; }
+.gr-an-chart { display: flex; align-items: flex-end; gap: 2px; height: 7em; margin: .3em 0 0; border-bottom: 1px solid #889; }
+.gr-an-chart i { flex: 1 1 0; min-width: 2px; background: #2a6ebb; display: block; }
+.gr-an-chart i.is-robots { background: #9a9aa5; }
+.gr-an-chart i.is-reports { background: #2e8b57; }
+.gr-an-chart i.is-users { background: #b8741a; }
+.gr-an-axis { display: flex; justify-content: space-between; font-size: .75em; color: #666; margin-bottom: 1.2em; }
+.gr-an-two { display: flex; flex-wrap: wrap; gap: 2em; }
+.gr-an-two > div { flex: 1 1 18em; }
+table.gr-an-table td:last-child, table.gr-an-table th:last-child { text-align: right; }
+</style>
+<h1 data-gr-tip="Επισκέπτες από τα αρχεία του διακομιστή (μόνο ημερήσια αθροίσματα, χωρίς ονόματα ή διευθύνσεις) και αναφορές από τη βάση.">Επισκέπτες και στατιστικά</h1>
+<p class="sm">Τελευταίες [% period_days %] ημέρες, ώρα Αθήνας. Τα στοιχεία επισκεπτών μετρούν με την ώρα, από το αρχείο του διακομιστή: χωρίς cookies, χωρίς εργαλείο τρίτου.
+[% IF have_visits %]Μετρημένα μέχρι [% counted_to | html %].[% END %]</p>
+
+[% IF !have_visits %]
+<p><strong>Οι επισκέπτες δεν έχουν μετρηθεί ακόμα.</strong> Η πρώτη μέτρηση γίνεται στην επόμενη ώρα (bin/greece/visits-aggregate). Οι αναφορές παρακάτω είναι ζωντανές.</p>
+[% END %]
+
+<div class="gr-an-cards">
+    <div class="gr-an-card"><b>[% total_people %]</b><span>προβολές σελίδων από ανθρώπους ([% period_days %] ημέρες)</span></div>
+    <div class="gr-an-card"><b>[% today_visitors %]</b><span>διαφορετικοί επισκέπτες σήμερα</span></div>
+    <div class="gr-an-card"><b>[% total_robots %]</b><span>προβολές από ρομπότ (Google, ΑΙ, σαρωτές)</span></div>
+    <div class="gr-an-card"><b>[% reports_all %]</b><span>αναφορές συνολικά ([% total_reports %] τις τελευταίες [% period_days %] ημέρες)</span></div>
+    <div class="gr-an-card"><b>[% users_all %]</b><span>λογαριασμοί ([% total_users %] νέοι)</span></div>
+    <div class="gr-an-card"><b>[% IF waiting %]<a href="[% c.uri_for('/admin/greece/approve') %]">[% waiting %]</a>[% ELSE %]0[% END %]</b><span>αναφορές προς έγκριση</span></div>
+</div>
+
+<h2>Διαφορετικοί επισκέπτες την ημέρα (άνθρωποι)</h2>
+<div class="gr-an-chart" role="img" aria-label="Επισκέπτες ανά ημέρα">
+[% FOR d IN days %]<i style="height:[% d.visitors_pct %]%" title="[% d.day %]: [% d.visitors %] επισκέπτες, [% d.people %] προβολές"></i>[% END %]
+</div>
+<div class="gr-an-axis"><span>[% days.0.day %]</span><span>μέγιστο [% max.visitors %]</span><span>[% days.-1.day %]</span></div>
+
+<h2>Προβολές σελίδων από ρομπότ</h2>
+<div class="gr-an-chart" role="img" aria-label="Προβολές ρομπότ ανά ημέρα">
+[% FOR d IN days %]<i class="is-robots" style="height:[% d.robots_pct %]%" title="[% d.day %]: [% d.robots %] προβολές, [% d.bots_seen %] διευθύνσεις"></i>[% END %]
+</div>
+<div class="gr-an-axis"><span>[% days.0.day %]</span><span>μέγιστο [% max.robots %]</span><span>[% days.-1.day %]</span></div>
+
+<h2>Νέες αναφορές την ημέρα</h2>
+<div class="gr-an-chart" role="img" aria-label="Αναφορές ανά ημέρα">
+[% FOR d IN days %]<i class="is-reports" style="height:[% d.reports_pct %]%" title="[% d.day %]: [% d.reports %] αναφορές"></i>[% END %]
+</div>
+<div class="gr-an-axis"><span>[% days.0.day %]</span><span>μέγιστο [% max.reports %]</span><span>[% days.-1.day %]</span></div>
+
+<h2>Νέοι λογαριασμοί την ημέρα</h2>
+<div class="gr-an-chart" role="img" aria-label="Νέοι λογαριασμοί ανά ημέρα">
+[% FOR d IN days %]<i class="is-users" style="height:[% d.users_pct %]%" title="[% d.day %]: [% d.users %] λογαριασμοί"></i>[% END %]
+</div>
+<div class="gr-an-axis"><span>[% days.0.day %]</span><span>μέγιστο [% max.users %]</span><span>[% days.-1.day %]</span></div>
+
+<div class="gr-an-two">
+    <div>
+        <h2>Πιο δημοφιλείς σελίδες (7 ημέρες, άνθρωποι)</h2>
+        [% IF top_pages.size %]
+        <table class="gr-an-table"><thead><tr><th>Σελίδα</th><th>Προβολές</th></tr></thead><tbody>
+        [% FOR r IN top_pages %]<tr><td>[% r.0 | html %]</td><td>[% r.1 %]</td></tr>[% END %]
+        </tbody></table>
+        [% ELSE %]<p class="sm">Καμία ακόμα.</p>[% END %]
+    </div>
+    <div>
+        <h2>Από πού ήρθαν (7 ημέρες)</h2>
+        [% IF top_refs.size %]
+        <table class="gr-an-table"><thead><tr><th>Ιστότοπος</th><th>Προβολές</th></tr></thead><tbody>
+        [% FOR r IN top_refs %]<tr><td>[% r.0 | html %]</td><td>[% r.1 %]</td></tr>[% END %]
+        </tbody></table>
+        [% ELSE %]<p class="sm">Καμία ακόμα (όσοι έρχονται από αναζήτηση ή κατευθείαν δεν αφήνουν ιστότοπο).</p>[% END %]
+    </div>
+</div>
+
+<div class="gr-an-two">
+    <div>
+        <h2>Αναφορές ανά κατάσταση</h2>
+        [% IF by_state.size %]
+        <table class="gr-an-table"><thead><tr><th>Κατάσταση</th><th>Αναφορές</th></tr></thead><tbody>
+        [% FOR r IN by_state %]<tr><td>[% (gr_state_names.${r.0} || r.0) | html %]</td><td>[% r.1 %]</td></tr>[% END %]
+        </tbody></table>
+        [% ELSE %]<p class="sm">Δεν υπάρχουν αναφορές ακόμα.</p>[% END %]
+    </div>
+    <div>
+        <h2>Δήμοι με τις περισσότερες αναφορές</h2>
+        [% IF by_body.size %]
+        <table class="gr-an-table"><thead><tr><th>Φορέας</th><th>Αναφορές</th></tr></thead><tbody>
+        [% FOR r IN by_body %]<tr><td>[% r.0 | html %]</td><td>[% r.1 %]</td></tr>[% END %]
+        </tbody></table>
+        [% ELSE %]<p class="sm">Δεν υπάρχουν αναφορές ακόμα.</p>[% END %]
+    </div>
+</div>
+
+<p class="sm">Τα «ρομπότ» είναι αυτά που δηλώνουν στο όνομά τους ότι είναι ρομπότ (Googlebot, ClaudeBot, εργαλεία σάρωσης). Όσα δεν δηλώνονται μετράνε ως άνθρωποι, άρα οι αριθμοί των ανθρώπων είναι ένα άνω όριο.
+Ένας επισκέπτης μετράται από τη διεύθυνσή του, κρυπτογραφημένη με τυχαίο κλειδί που σβήνεται σε δύο ημέρες· η διεύθυνση δεν αποθηκεύεται.</p>
+[% INCLUDE 'admin/footer.html' %]

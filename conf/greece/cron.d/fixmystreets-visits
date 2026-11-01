@@ -1,0 +1,6 @@
+# FixMyStreets: visitor counts for /admin/greece/analytics, every hour at :07 (bin/greece/visits-aggregate).
+# Adds up the hours that have finished from nginx's access log (daily counts only, nothing that names a visitor).
+# The script goes on stdin with the log after it (perl reads what follows __END__ as DATA).
+# Install: sudo install -m 644 conf/greece/cron.d/fixmystreets-visits /etc/cron.d/
+SHELL=/bin/bash
+7 * * * * debian { cat /opt/fixmystreet/bin/greece/visits-aggregate; docker logs --since 30h fixmystreet-nginx-1 2>&1; } | docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - >> /var/log/fixmystreets/visits.log 2>&1

@@ -1,0 +1,152 @@
+#!/usr/bin/env perl
+# Visitor counts for the admin page /admin/greece/analytics: reads nginx's access log, adds up
+# each finished hour into daily counts (Athens days), and keeps nothing that names a visitor.
+#
+#   - Per day and kind (people / robots): requests, page views, distinct visitors.
+#   - Per day: the most viewed pages and the sites people came from.
+#   - A distinct visitor is counted from the address in X-Forwarded-For (the last field of the log line),
+#     hashed with a random salt that is made per day and deleted after two days. The hashes live in
+#     greece_visits_seen for the same two days, only so that the hourly runs do not count a visitor twice;
+#     the address itself is never stored.
+#   - greece_visits_state remembers the last hour that was counted, so a line is counted once however often this runs.
+#
+# Runs inside the app container, from the host's cron every hour (conf/greece/cron.d/fixmystreets-visits).
+# The script comes on stdin (perl -) with the log right after it: perl reads what follows __END__ as DATA.
+#   { cat bin/greece/visits-aggregate; docker logs --since 30h fixmystreet-nginx-1 2>&1; } \
+#       | docker exec -i -w /var/www/fixmystreet/fixmystreet fixmystreet-fixmystreet-1 bin/cron-wrapper perl - [--dry-run]
+use strict;
+use warnings;
+use FixMyStreet;
+use FixMyStreet::DB;
+use DateTime;
+use Digest::SHA 'sha256_hex';
+use Time::Local 'timegm';
+
+my $dry_run = grep { $_ eq '--dry-run' } @ARGV;
+my $dbh = FixMyStreet::DB->schema->storage->dbh;
+my $tz = 'Europe/Athens';
+
+$dbh->do($_) for (
+    'CREATE TABLE IF NOT EXISTS greece_visits_daily (day date NOT NULL, kind text NOT NULL,
+        requests integer NOT NULL DEFAULT 0, pageviews integer NOT NULL DEFAULT 0, uniques integer NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, kind))',
+    'CREATE TABLE IF NOT EXISTS greece_visits_pages (day date NOT NULL, path text NOT NULL, views integer NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, path))',
+    'CREATE TABLE IF NOT EXISTS greece_visits_ref (day date NOT NULL, host text NOT NULL, views integer NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, host))',
+    'CREATE TABLE IF NOT EXISTS greece_visits_seen (day date NOT NULL, kind text NOT NULL, h text NOT NULL,
+        PRIMARY KEY (day, kind, h))',
+    'CREATE TABLE IF NOT EXISTS greece_visits_salt (day date PRIMARY KEY, salt text NOT NULL)',
+    'CREATE TABLE IF NOT EXISTS greece_visits_state (id integer PRIMARY KEY, last_hour timestamptz NOT NULL)',
+);
+
+my %mon = (Jan=>0,Feb=>1,Mar=>2,Apr=>3,May=>4,Jun=>5,Jul=>6,Aug=>7,Sep=>8,Oct=>9,Nov=>10,Dec=>11);
+my $now_hour = int(time / 3600) * 3600;
+my ($state) = $dbh->selectrow_array('SELECT extract(epoch from last_hour)::bigint FROM greece_visits_state WHERE id = 1');
+# First run: only the last 24 hours, so a long log is not credited to one day.
+my $from = defined $state ? $state : $now_hour - 24 * 3600;
+
+my $BOT = qr/bot|crawl|spider|slurp|curl\/|wget|python|go-http|java\/|scrapy|headless|monitor|uptime|preview|facebookexternalhit|bytespider|ahrefs|semrush|mj12|petalbot|axios|node-fetch|libwww|httpclient|lighthouse|pingdom|statuscake|gtmetrix|check_http|cloudflare|^-?$/i;
+my $ASSET = qr/\.(?:js|css|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|json|geojson|xml|txt|map|mp4|webm|webmanifest|pbf|mvt)$/i;
+my $NOTPAGE = qr{^/(?:admin|auth|places|mapit|tiles|static|cobrands|i/|photo|vote|greece/vote|greece/photo|greece/otp|ajax|report/new/ajax|offline|auth/ajax|favicon|\.well-known)};
+
+my (%day_kind, %pages, %refs, %seen, %daysalt);
+my $salt_for = sub {
+    my $day = shift;
+    return $daysalt{$day} //= do {
+        my ($s) = $dbh->selectrow_array('SELECT salt FROM greece_visits_salt WHERE day = ?', undef, $day);
+        if (!$s) {
+            $s = join '', map { sprintf '%08x', int rand 2**32 } 1 .. 4;
+            $dbh->do('INSERT INTO greece_visits_salt (day, salt) VALUES (?, ?) ON CONFLICT DO NOTHING', undef, $day, $s) unless $dry_run;
+        }
+        $s;
+    };
+};
+
+my ($lines, $counted) = (0, 0);
+my $max_hour = $from;
+while (my $l = <DATA>) {
+    # <remote> - - [01/Nov/2026:11:21:28 +0000] "GET /path HTTP/1.1" 200 9661 "<referer>" "<agent>" "<forwarded-for>"
+    $l =~ m{^\S+ \S+ \S+ \[(\d\d)/(\w{3})/(\d{4}):(\d\d):(\d\d):(\d\d) [+-]\d{4}\] "(\S+) (\S+)[^"]*" (\d{3}) \S+ "([^"]*)" "([^"]*)" "([^"]*)"\s*$}
+        or next;
+    my ($d, $m, $y, $H, $M, $S, $method, $uri, $status, $ref, $ua, $xff) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+    $lines++;
+    my $epoch = timegm($S, $M, $H, $d, $mon{$m} // next, $y);
+    next if $epoch < $from || $epoch >= $now_hour;
+    my $hour = int($epoch / 3600) * 3600;
+    $max_hour = $hour if $hour > $max_hour;
+    $counted++;
+    my $day = DateTime->from_epoch(epoch => $epoch, time_zone => $tz)->ymd;
+    my $kind = $ua =~ $BOT ? 'robots' : 'people';
+    my ($client) = split /\s*,\s*/, $xff;
+    $client = '' if !defined $client || $client eq '-';
+    $day_kind{$day}{$kind}{requests}++;
+    if ($client ne '') {
+        my $h = sha256_hex($salt_for->($day) . $client);
+        $seen{$day}{$kind}{$h} = 1;
+    }
+    next unless $method eq 'GET' && $status =~ /^2/;
+    ( my $path = $uri ) =~ s/\?.*//;
+    next if $path =~ $ASSET || $path =~ $NOTPAGE;
+    $day_kind{$day}{$kind}{pageviews}++;
+    next unless $kind eq 'people';
+    $path =~ s{^/report/\d+.*}{/report/N};
+    $path =~ s{^/reports/.+}{/reports/*};
+    $path =~ s{^/around.*}{/around};
+    $pages{$day}{ substr($path, 0, 80) }++;
+    if ($ref =~ m{^https?://([^/:?#]+)}i) {
+        my $host = lc $1;
+        $host =~ s/^www\.//;
+        $refs{$day}{$host}++ unless $host =~ /(?:^|\.)fixmystreets\.gr$/;
+    }
+}
+
+if ($dry_run) {
+    print "lines $lines, counted $counted, hours up to ", scalar gmtime($max_hour), " UTC (dry run, nothing written)\n";
+    for my $day (sort keys %day_kind) {
+        for my $kind (sort keys %{ $day_kind{$day} }) {
+            my $r = $day_kind{$day}{$kind};
+            printf "%s %-6s requests %d pageviews %d uniques(this run) %d\n", $day, $kind,
+                $r->{requests} // 0, $r->{pageviews} // 0, scalar keys %{ $seen{$day}{$kind} || {} };
+        }
+    }
+    exit 0;
+}
+
+$dbh->begin_work;
+for my $day (keys %day_kind) {
+    for my $kind (keys %{ $day_kind{$day} }) {
+        my $r = $day_kind{$day}{$kind};
+        $dbh->do('INSERT INTO greece_visits_daily (day, kind, requests, pageviews) VALUES (?, ?, ?, ?)
+            ON CONFLICT (day, kind) DO UPDATE SET requests = greece_visits_daily.requests + EXCLUDED.requests,
+                pageviews = greece_visits_daily.pageviews + EXCLUDED.pageviews',
+            undef, $day, $kind, $r->{requests} // 0, $r->{pageviews} // 0);
+        my $ins = $dbh->prepare('INSERT INTO greece_visits_seen (day, kind, h) VALUES (?, ?, ?) ON CONFLICT DO NOTHING');
+        $ins->execute($day, $kind, $_) for keys %{ $seen{$day}{$kind} || {} };
+        $dbh->do('UPDATE greece_visits_daily SET uniques = (SELECT count(*) FROM greece_visits_seen s WHERE s.day = ? AND s.kind = ?)
+            WHERE day = ? AND kind = ?', undef, $day, $kind, $day, $kind);
+    }
+}
+for my $day (keys %pages) {
+    $dbh->do('INSERT INTO greece_visits_pages (day, path, views) VALUES (?, ?, ?)
+        ON CONFLICT (day, path) DO UPDATE SET views = greece_visits_pages.views + EXCLUDED.views',
+        undef, $day, $_, $pages{$day}{$_}) for keys %{ $pages{$day} };
+}
+for my $day (keys %refs) {
+    $dbh->do('INSERT INTO greece_visits_ref (day, host, views) VALUES (?, ?, ?)
+        ON CONFLICT (day, host) DO UPDATE SET views = greece_visits_ref.views + EXCLUDED.views',
+        undef, $day, $_, $refs{$day}{$_}) for keys %{ $refs{$day} };
+}
+# Everything before this hour is counted. $now_hour even when the log had no line in the last hours.
+$dbh->do('INSERT INTO greece_visits_state (id, last_hour) VALUES (1, to_timestamp(?))
+    ON CONFLICT (id) DO UPDATE SET last_hour = EXCLUDED.last_hour', undef, $now_hour);
+# The hashes and salts are only needed while a day can still get lines (two days, to be safe).
+$dbh->do("DELETE FROM greece_visits_seen WHERE day < (now() AT TIME ZONE 'Europe/Athens')::date - 2");
+$dbh->do("DELETE FROM greece_visits_salt WHERE day < (now() AT TIME ZONE 'Europe/Athens')::date - 2");
+# Daily counts are kept for two years, the page and site lists for 90 days.
+$dbh->do("DELETE FROM greece_visits_daily WHERE day < (now() AT TIME ZONE 'Europe/Athens')::date - 730");
+$dbh->do("DELETE FROM greece_visits_pages WHERE day < (now() AT TIME ZONE 'Europe/Athens')::date - 90");
+$dbh->do("DELETE FROM greece_visits_ref WHERE day < (now() AT TIME ZONE 'Europe/Athens')::date - 90");
+$dbh->commit;
+print "counted $counted lines up to ", scalar gmtime($now_hour), " UTC\n";
+__END__

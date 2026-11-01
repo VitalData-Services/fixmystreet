@@ -763,6 +763,7 @@ sub admin_pages {
     if ($user && $user->is_superuser) {
         $pages->{'greece/approve'} = [ 'Αναφορές προς έγκριση', 1 ];
         $pages->{'greece/requests'} = [ 'Αιτήματα πολιτών', 2 ];
+        $pages->{'greece/analytics'} = [ 'Επισκέπτες και στατιστικά', 3 ];
         $pages->{'greece/handbook'} = [ 'Εγχειρίδιο διαχειριστή', 200 ];
     }
     return $pages;
