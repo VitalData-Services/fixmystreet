@@ -6,6 +6,7 @@ Subject: [% IF L == 'en' %]Your report [% report.greece_ref %] has been logged[%
 Γεια σου,
 
 η αναφορά σου «[% report.title %]» καταχωρήθηκε με αριθμό [% report.greece_ref %][% IF report.state == 'hidden' %]. Θα ελεγχθεί πρώτα από τους διαχειριστές και μετά θα σταλεί[% ELSIF report.bodies_str %] και θα σταλεί [% report.bodies_str.match(',') ? 'στις αρμόδιες υπηρεσίες' : 'στην αρμόδια υπηρεσία' %]: [% report.body.replace('&#39;', "'").replace(' and ', ' και ') %][% END %].
+Τοποθεσία: [% report.greece_address(cobrand || c.cobrand) %]
 [% IF report_url %]
 Μπορείς να τη δεις εδώ: [% report_url %]
 [% END %]
@@ -25,6 +26,7 @@ Subject: [% IF L == 'en' %]Your report [% report.greece_ref %] has been logged[%
 Hello,
 
 your report "[% report.title %]" has been logged as number [% report.greece_ref %][% IF report.state == 'hidden' %]. It will be checked by the moderators first and then sent[% ELSIF report.bodies_str %] and will be sent to: [% report.body.replace('&#39;', "'") %][% END %].
+Location: [% report.greece_address(cobrand || c.cobrand) %]
 [% IF report_url %]
 You can see it here: [% report_url %]
 [% END %]

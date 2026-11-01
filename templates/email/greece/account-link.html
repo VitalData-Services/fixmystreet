@@ -5,6 +5,7 @@
 [%
 bodyname = report.body.replace('&#39;', "'");
 held = report.state == 'hidden';
+address = report.greece_address(cobrand || c.cobrand);
 plural = report.bodies_str.match(',');
 email_summary = "Η αναφορά σου " _ report.greece_ref _ " καταχωρήθηκε. / Your report " _ report.greece_ref _ " has been logged.";
 IF L == 'en';
@@ -27,6 +28,13 @@ INCLUDE '_email_top.html';
       <td style="padding: 14px 16px; text-align: left; font-size: 13px; line-height: 18px; font-weight: 600; color: #475569;">[% lg == 'el' ? 'Αριθμός αναφοράς' : 'Report number' %]<br>
         <span style="font-size: 26px; line-height: 34px; font-weight: 800; letter-spacing: 0.02em; color: #0f172a; font-family: monospace;">[% report.greece_ref | html %]</span></td>
     </tr>
+    [%~ IF address %]
+    <tr>
+      <td style="padding: 12px 16px; border-top: 1px solid #dbe4f5; text-align: left; font-size: 15px; line-height: 22px; color: #0f172a;">
+        <span style="font-size: 13px; line-height: 18px; font-weight: 600; color: #475569;">[% lg == 'el' ? 'Τοποθεσία' : 'Location' %]</span><br>
+        <strong>[% address | html %]</strong></td>
+    </tr>
+    [%~ END %]
     <tr>
       <td style="padding: 12px 16px; border-top: 1px solid #dbe4f5; text-align: left; font-size: 15px; line-height: 22px; color: #0f172a;">
         [%~ IF held %]
