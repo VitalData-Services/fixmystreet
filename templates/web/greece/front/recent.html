@@ -1,10 +1,6 @@
 [%# FixMyStreet's, with a line when there are no reports yet, beside the home page map (gr_front_recent,
     around/postcode_form.html). ~%]
-[%
-    recent_photos = c.cobrand.recent_photos('front', 5);
-%]
-[%# The latest visible reports, with or without a photo (recent_photos alone leaves the block empty while
-    no report has one), and how many wait to be sent: the next batch, and for a superuser how many of them
+[%# The latest 5 visible reports, always (owner, 2026-11-01: not only those with a photo), and how many wait to be sent: the next batch, and for a superuser how many of them
     still need approval (/admin/greece/approve). ~%]
 [%
     gr_recent = c.cobrand.problems.search(
@@ -27,28 +23,7 @@
     [%~ IF gr_unapproved AND c.user_exists AND c.user.is_superuser %] · <a href="/admin/greece/approve">[% gr_unapproved %] [% c.cobrand.greece_t('περιμένουν έγκριση', 'need approval') %]</a>[% END %]</p>[% END %]
 [% END %]
 
-[% IF recent_photos.size %]
-<div id="front-recently">
-    <h2>
-        [%- IF c.cobrand.moniker == 'hart' %]
-            Recently reported
-        [% ELSE %]
-            [% loc('Recently reported problems') %]
-        [% END -%]
-    </h2>
-
-    [% PROCESS gr_waiting_line %]
-    [% TRY %][% INCLUDE "front/pre-recent.html" %][% CATCH file %][% END %]
-
-    <section class="full-width">
-        <ul id="js-reports-list" class="item-list item-list--reports item-list--front-page">
-          [% FOREACH problem IN recent_photos %]
-            [% INCLUDE 'front/_list-entry.html' %]
-          [% END %]
-        </ul>
-    </section>
-</div>
-[% ELSIF gr_front_recent %]
+[% IF gr_front_recent %]
 <div id="front-recently">
     <h2>[% loc('Recently reported problems') %]</h2>
     [% PROCESS gr_waiting_line %]
