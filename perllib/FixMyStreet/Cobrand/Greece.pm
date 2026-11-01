@@ -308,6 +308,19 @@ sub greece_terms_cookie_date {
     return DateTime->from_epoch(epoch => $at, time_zone => FixMyStreet->local_time_zone)->strftime('%d/%m/%Y');
 }
 
+# True when the report is for a category that asks for the street number ("arithmos") and no number can be found
+# for it: not at the spot, not written by the reporter, not close by. A number found close by is kept in the
+# stash for greece_near (report_new_munge_before_insert), so the emails need not look for it again.
+sub greece_number_missing {
+    my ($self, $c, $report) = @_;
+    return 0 unless grep { ($_->{name} // '') eq 'arithmos' } @{ $report->get_extra_fields };
+    return 0 unless defined $report->latitude && defined $report->longitude;
+    my $address = $self->find_closest({ latitude => $report->latitude, longitude => $report->longitude });
+    my $found = $report->greece_street_number($address);
+    $c->stash->{greece_near} = $found->{near} if $found->{near};
+    return $found->{number} ? 0 : 1;
+}
+
 sub report_check_for_errors {
     my ($self, $c) = @_;
     my $report = $c->stash->{report};
@@ -333,6 +346,11 @@ sub report_check_for_errors {
         'Without a photo, enter your name (at least 4 characters). Anonymous reports need a photo.')
         if $c->stash->{greece_name_needed} && !$c->user_exists && ($c->get_param('name') // '') !~ /\S/;
     $more{greece_name} = $name_error if $name_error;
+    # A complaint to the police needs the street number (owner, 2026-11-01): the map, Apple Maps or the closest
+    # number nearby give it; only if none does, the reporter has to write it.
+    $more{xarithmos} = $self->greece_t('Δεν βρήκαμε αριθμό οδού σε αυτό το σημείο. Γράψε τον αριθμό (π.χ. 46) για να σταλεί η καταγγελία.',
+        'We could not find a street number at this spot. Enter the number (e.g. 46) so the complaint can be sent.')
+        if $report && $self->greece_number_missing($c, $report);
     if ($report && ($report->title // '') !~ /\S/) {
         my $category = $report->category // '';
         my $title = $category eq 'Άλλο' || $category eq '' ? greece_excerpt($report->detail, 60) : $category;
@@ -588,6 +606,7 @@ sub disable_login_for_email {
 sub report_new_munge_before_insert {
     my ($self, $report) = @_;
     my $c = $self->{c};
+    $report->set_extra_metadata(greece_near => $c->stash->{greece_near}) if $c && $c->stash->{greece_near};
     if ($c) {
         # What was accepted, when, and how: the record that goes with the report (privacy page §6, terms §8).
         my $ticked = $c->get_param('greece_terms') ? 1 : 0;
@@ -1507,6 +1526,11 @@ sub greece_street_number {
     $given =~ s/^\s+|\s+$//g;
     $given =~ s/^(?:αρ(?:ιθμ[οό]ς)?|no|n)\.?\s*//i;
     return { number => $given } if $given =~ /^\d{1,4}(?:\s*[-\/]\s*\d{1,4})?\s*[A-Za-zΑ-Ωα-ω]?$/;
+    # Last, the closest number in the street (kept from when the report was made, else looked for now), written
+    # as «κοντά στον αρ. N»; its street is the one Apple names, the number belongs to that one.
+    my $near = $self->get_extra_metadata('greece_near');
+    $near = __PACKAGE__->greece_apple_near($self->latitude, $self->longitude) unless $near && $near->{number};
+    return { number => "κοντά στον αρ. $near->{number}", street => $near->{street}, near => $near } if $near && $near->{number};
     return {};
 }
 
@@ -1520,7 +1544,8 @@ sub greece_street_parts {
         my $ap = __PACKAGE__->greece_apple_address($self->latitude, $self->longitude);
         return { street => $ap->{street}, number => $ap->{number} } if $ap && $ap->{street} && $ap->{number};
     }
-    return { street => $parts->{street}, number => $self->greece_street_number($address)->{number} };
+    my $found = $self->greece_street_number($address);
+    return { street => $found->{street} || $parts->{street}, number => $found->{number} };
 }
 
 # Apple Maps Server API (https://developer.apple.com/documentation/applemapsserverapi): the house number
@@ -1547,16 +1572,40 @@ sub greece_apple_address {
 sub greece_apple_number {
     my ($class, $lat, $lon, $street) = @_;
     my $a = $class->greece_apple_address($lat, $lon) or return '';
-    require Unicode::Normalize;
-    my $plain = sub {
-        my $x = Unicode::Normalize::NFD(uc(shift // ''));
-        $x =~ s/\p{M}//g; $x =~ s/[^\p{L}\p{N}]+//g;
-        $x =~ s/^(?:ΣΤΡ(?:ΑΤΗΓΟΥ)?|ΛΕΩΦ(?:ΟΡΟΣ)?|ΟΔΟΣ|ΠΛΑΤΕΙΑ|ΠΛ)//;
-        $x;
-    };
-    my ($have, $want) = ($plain->($a->{street}), $plain->($street));
+    my ($have, $want) = (_greece_plain_street($a->{street}), _greece_plain_street($street));
     return '' unless length $have && length $want && (index($want, $have) >= 0 || index($have, $want) >= 0);
     return $a->{number} // '';
+}
+# A street name without accents, spaces, punctuation or a leading «οδός»/«λεωφόρος», for comparing two spellings.
+sub _greece_plain_street {
+    require Unicode::Normalize;
+    my $x = Unicode::Normalize::NFD(uc(shift // ''));
+    $x =~ s/\p{M}//g; $x =~ s/[^\p{L}\p{N}]+//g;
+    $x =~ s/^(?:ΣΤΡ(?:ΑΤΗΓΟΥ)?|ΛΕΩΦ(?:ΟΡΟΣ)?|ΟΔΟΣ|ΠΛΑΤΕΙΑ|ΠΛ)//;
+    $x;
+}
+# Nothing exact at the spot (Apple has the street but no number there): the number of the closest address on
+# that same street (the name Apple gives for the spot), looked for 15, 30 and 50 m around it in eight
+# directions, stopping at the first one. { street, number }, or an empty hash. At most about 8 seconds.
+sub greece_apple_near {
+    my ($class, $lat, $lon) = @_;
+    return {} unless defined $lat && defined $lon;
+    my $base = $class->greece_apple_address($lat, $lon) or return {};
+    my $want = _greece_plain_street($base->{street});
+    return {} unless length $want;
+    my $until = time + 8;
+    my $pi = 3.14159265358979;
+    for my $metres (15, 30, 50) {
+        for my $bearing (0, 90, 180, 270, 45, 135, 225, 315) {
+            return {} if time > $until;
+            my $rad = $bearing * $pi / 180;
+            my $a = $class->greece_apple_address($lat + $metres * cos($rad) / 111320,
+                $lon + $metres * sin($rad) / (111320 * cos($lat * $pi / 180))) or next;
+            next unless $a->{number} && _greece_plain_street($a->{street}) eq $want;
+            return { street => $base->{street}, number => $a->{number} };
+        }
+    }
+    return {};
 }
 # The token MapKit JS (the satellite map) asks for: for this site's origin only, valid 30 minutes, made once per
 # 20 minutes in this process. Empty when no Apple Maps key is configured.
