@@ -3,6 +3,6 @@
 <title>
     [% IF gr_title %][% gr_title %] :: [% site_name -%]
     [% ELSIF title %][% tprintf('%s :: ', title) %][% site_name -%]
-    [% ELSIF c.req.uri.path == '/' %][% site_name %] – [% c.cobrand.greece_t('Αναφορά προβλημάτων στον δήμο σου', 'Report problems to your municipality') -%]
+    [% ELSIF c.req.uri.path == '/' %][% site_name %] – [% c.cobrand.greece_t('Αναφορά προβλημάτων στον δήμο ή στην Αστυνομία', 'Report problems to your municipality or the police') -%]
     [% ELSE %][% site_name -%][% END %]
 </title>
