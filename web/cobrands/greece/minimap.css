@@ -11,6 +11,8 @@
 
 /* The report maps' pin (FixMyStreet's /i/pin-green.png, 48×64, with its shadow), its tip exactly on the
    map centre, as map-OpenLayers.js draws it (offsets −24,−64; shadow −7,−30). */
+.gr-minimap__pin { display: none; }
+.gr-pin-on .gr-minimap__pin { display: block; }
 .gr-minimap__pin {
     position: absolute;
     left: 50%;

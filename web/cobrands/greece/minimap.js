@@ -167,6 +167,38 @@
         });
         map.on('moveend', update);
 
+        // The places where reports have been made, as clusters with their number (like the national maps) that open
+        // up as the map zooms in, then single dots that lead to the report. /greece/report-points (GreecePoints.pm).
+        map.on('load', function () {
+            fetch('/greece/report-points').then(function (r) { return r.json(); }).then(function (data) {
+                map.addSource('reports', { type: 'geojson', data: data, cluster: true, clusterRadius: 45, clusterMaxZoom: 14 });
+                map.addLayer({ id: 'reports-cluster', type: 'circle', source: 'reports', filter: ['has', 'point_count'],
+                    paint: {
+                        'circle-color': ['step', ['get', 'point_count'], '#7a4fd0', 10, '#6733c0', 50, '#4a2390'],
+                        'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 25],
+                        'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
+                map.addLayer({ id: 'reports-count', type: 'symbol', source: 'reports', filter: ['has', 'point_count'],
+                    layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Bold', 'Noto Sans Regular'], 'text-size': 13, 'text-allow-overlap': true },
+                    paint: { 'text-color': '#fff' } });
+                map.addLayer({ id: 'reports-point', type: 'circle', source: 'reports', filter: ['!', ['has', 'point_count']],
+                    paint: { 'circle-color': '#5b6ee1', 'circle-radius': 8, 'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
+                map.on('click', 'reports-cluster', function (e) {
+                    var f = map.queryRenderedFeatures(e.point, { layers: ['reports-cluster'] })[0];
+                    map.getSource('reports').getClusterExpansionZoom(f.properties.cluster_id).then(function (z) {
+                        map.easeTo({ center: f.geometry.coordinates, zoom: z });
+                    });
+                });
+                map.on('click', 'reports-point', function (e) {
+                    var p = e.features[0].properties;
+                    window.location.href = '/report/' + encodeURIComponent(p.ref);
+                });
+                ['reports-cluster', 'reports-point'].forEach(function (id) {
+                    map.on('mouseenter', id, function () { map.getCanvas().style.cursor = 'pointer'; });
+                    map.on('mouseleave', id, function () { map.getCanvas().style.cursor = ''; });
+                });
+            }, function () {});
+        });
+
         // Map type: «Χάρτης» (our own tiles) or «Δορυφόρος» (Apple Maps, hybrid, MapKit JS, loaded only when chosen; the
         // visitor's address reaching Apple is accepted, owner 2026-10-30). The MapLibre map stays underneath and
         // follows the satellite one, so the buttons, the municipality card and the report link work the same.
@@ -249,6 +281,7 @@
             var c = map.getCenter(), z = map.getZoom();
             var ready = z >= REPORT_ZOOM;
             reportLink.hidden = !ready;
+            box.classList.toggle("gr-pin-on", ready);   // the centre pin only where «Αναφορά εδώ» is on offer, not over the report clusters
             // One blue button at a time: «Χρήση της τοποθεσίας μου» until «Αναφορά εδώ» can be pressed.
             locateBtn.classList.toggle('btn--primary', !ready);
             if (ready) {
