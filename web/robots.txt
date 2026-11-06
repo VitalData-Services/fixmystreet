@@ -7,6 +7,9 @@ Disallow: /admin
 Disallow: /alert
 Disallow: /contact
 Disallow: /greece/
+Disallow: /around
+Disallow: /*?lat=
+Disallow: /*?pc=
 Crawl-delay: 3
 
 Sitemap: https://fixmystreets.gr/sitemap.xml
