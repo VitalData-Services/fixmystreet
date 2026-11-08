@@ -10,7 +10,9 @@
      gr_cls = 'closed'; gr_ico = 'copy'; gr_lbl = c.cobrand.greece_t('Διπλότυπη αναφορά', 'Duplicate report');
    ELSIF gr_st.match('^(not responsible|unable to fix|internal referral)$');
      gr_cls = 'closed'; gr_ico = 'x'; gr_lbl = c.cobrand.greece_t('Έκλεισε', 'Closed');
-   ELSIF gr_st.match('^(in progress|investigating|action scheduled|planned|fix pending)$');
+   ELSIF gr_st == 'fix pending';
+     gr_cls = 'review'; gr_ico = 'clock'; gr_lbl = c.cobrand.greece_t('Διορθώθηκε – αναμένει επιβεβαίωση', 'Fixed – awaiting confirmation');
+   ELSIF gr_st.match('^(in progress|investigating|action scheduled|planned)$');
      gr_cls = 'progress'; gr_ico = 'wrench'; gr_lbl = c.cobrand.greece_t('Σε εξέλιξη', 'In progress');
    ELSIF gr_st.match('^(unconfirmed|partial|hidden|draft)$');
      gr_cls = 'review'; gr_ico = 'clock'; gr_lbl = c.cobrand.greece_t('Σε έλεγχο', 'Being checked');
