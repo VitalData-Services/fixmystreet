@@ -103,17 +103,18 @@
 [%# Close requests (2026-11-08): a citizen said in an update that the problem is fixed -> state «fix pending» (Greece.pm
     process_open311_extras) until an admin closes it or sets it back to open. Listed here beside the approvals. ~%]
 [% IF c.user.is_superuser %]
-[% SET gr_closereq = c.model(DB::Problem).search({ state => fix pending }, { order_by => lastupdate }).all %]
+[% SET gr_closereq = [] %]
+[% FOR r IN c.model('DB::Problem').search({ state => 'fix pending' }, { order_by => 'lastupdate' }).all %][% gr_closereq.push(r) %][% END %]
 <h2 id="gr-close" data-gr-tip="Αναφορές όπου κάποιος δήλωσε σε ενημέρωση ότι το πρόβλημα διορθώθηκε. Μένουν «αναμένει επιβεβαίωση» μέχρι να τις κλείσεις (Διορθώθηκε) ή να τις ξαναβάλεις σε ανοιχτές.">Αιτήματα κλεισίματος ([% gr_closereq.size %])</h2>
 [% IF gr_closereq.size %]
 <table cellspacing="0" cellpadding="4" border="1">
     <tr><th>Αρ.</th><th>Κατηγορία / περιγραφή</th><th>Δήμος</th><th>Τελευταία ενημέρωση</th></tr>
     [% FOR r IN gr_closereq %]
     <tr>
-        <td><a href="[% c.uri_for(/admin/report_edit, r.id) %]">[% r.greece_ref | html %]</a></td>
+        <td><a href="[% c.uri_for('/admin/report_edit', r.id) %]">[% r.greece_ref | html %]</a></td>
         <td><strong>[% r.title | html %]</strong>[% IF r.detail %]<br>[% r.detail | truncate(160) | html %][% END %]</td>
         <td>[% r.body | html %]</td>
-        <td>[% r.lastupdate.strftime(%d/%m/%Y %H:%M) %]</td>
+        <td>[% r.lastupdate.strftime('%d/%m/%Y %H:%M') %]</td>
     </tr>
     [% END %]
 </table>
