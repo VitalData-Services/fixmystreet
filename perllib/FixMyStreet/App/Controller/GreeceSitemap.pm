@@ -26,6 +26,8 @@ my @PAGES = (
     [ '/faq',           'monthly', '0.6' ],
     [ '/about',         'monthly', '0.5' ],
     [ '/about/foreis',  'monthly', '0.4' ],
+    [ '/about/anafora-lakkouvas', 'monthly', '0.7' ],
+    [ '/about/kataggelia-stathmefsis', 'monthly', '0.7' ],
     [ '/about/privacy', 'yearly',  '0.3' ],
     [ '/about/terms',   'yearly',  '0.3' ],
 );

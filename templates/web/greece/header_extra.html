@@ -24,7 +24,7 @@
         gr_crumbs = [ ['Βοήθεια', '/faq'] ];
     ELSIF c.req.uri.path.match('^/about(/|$)');
         gr_crumbs = [ ['Σχετικά', '/about'] ];
-        gr_title_for = { '/about/privacy' => 'Πολιτική απορρήτου', '/about/terms' => 'Όροι χρήσης', '/about/foreis' => 'Για δήμους και φορείς' };
+        gr_title_for = { '/about/privacy' => 'Πολιτική απορρήτου', '/about/terms' => 'Όροι χρήσης', '/about/foreis' => 'Για δήμους και φορείς', '/about/anafora-lakkouvas' => 'Αναφορά λακκούβας', '/about/kataggelia-stathmefsis' => 'Καταγγελία παράνομης στάθμευσης' };
         gr_crumbs.push([ gr_title_for.$gr_path, gr_path ]) IF gr_title_for.$gr_path;
     END -%]
 [% IF gr_crumbs.size %]

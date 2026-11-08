@@ -14,6 +14,14 @@
         body.name _ c.cobrand.greece_t(
             ': αναφορές πολιτών για λακκούβες, φωτισμό, καθαριότητα, πεζοδρόμια και στάθμευση. Δες τι έχει αναφερθεί στον χάρτη και ανάφερε κι εσύ ένα πρόβλημα.',
             ': reports of potholes, street lights, cleaning, pavements and parking. See what has been reported on the map and report a problem too.');
+    ELSIF gr_path == '/about/anafora-lakkouvas';
+        c.cobrand.greece_t(
+            'Αναφορά λακκούβας στον δήμο σου: σημείωσε το σημείο στον χάρτη, πρόσθεσε φωτογραφία και η αναφορά φτάνει με email στην αρμόδια υπηρεσία. Δωρεάν, χωρίς εγγραφή.',
+            'Report a pothole to your municipality: mark the spot on the map, add a photo and the report reaches the responsible service by email. Free, no sign-up.');
+    ELSIF gr_path == '/about/kataggelia-stathmefsis';
+        c.cobrand.greece_t(
+            'Καταγγελία παράνομης στάθμευσης online: σημείωσε το σημείο στον χάρτη, πρόσθεσε φωτογραφία και η καταγγελία φτάνει στον δήμο ή την Αστυνομία. Δωρεάν, χωρίς εγγραφή.',
+            'Report illegal parking online: mark the spot on the map, add a photo and the report reaches the municipality or the police. Free, no sign-up.');
     ELSIF gr_path == '/about/foreis';
         c.cobrand.greece_t(
             'Για δήμους και φορείς: οι αναφορές των πολιτών φτάνουν με email στην αρμόδια υπηρεσία. Με λογαριασμό φορέα αλλάζετε την κατάσταση και απαντάτε δημόσια. Πώς τον αποκτάτε.',
