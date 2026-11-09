@@ -33,7 +33,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
-FMS = 'debian@10.0.201.30'
+FMS = os.environ.get("FMS_HOST", "debian@fms")   # ssh target of the site VM; set FMS_HOST outside it
 NOTIFY = 'falcon@fixmystreets.gr'
 DUE_DAYS = 90
 
